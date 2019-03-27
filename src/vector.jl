@@ -4,6 +4,7 @@ vector:
 - Author: ta_nyan
 - Date: 2019-03-17
 =#
+include("basis.jl")
 
 struct PhiVec
     coeff::Array{Float64}
@@ -27,25 +28,25 @@ struct PhiVec
         Phi vector of function.
     =#
     function PhiVec(coeff::Array{Float64}, basis::Basis)
-        if Base.length(coeff) != Base.length(Basis)
-            error("Phi and basis should have equal dimentions")
+        if Base.length(coeff) != Base.length(basis.basisFun)
+            Base.error("Phi and basis should have equal dimentions")
         end
         return new(coeff, basis, nothing)
     end
 
     function PhiVec(coeff::Array{Float64}, basis::Basis, sig::Array{Float64})
-        if Base.length(coeff) != Base.length(Basis)
-            error("Phi and basis should have equal dimentions")
+        if Base.length(coeff) != Base.length(basis.basisFun)
+            Base.error("Phi and basis should have equal dimentions")
         end
         if Base.length(size(sig)) != 2
-            error("Sigma matrix should be 2-dimentional")
+            Base.error("Sigma matrix should be 2-dimentional")
         end
         n, m = size(sig)
         if n != m
-            error("Sigma matrix should be square")
+            Base.error("Sigma matrix should be square")
         end
         if n != Base.length(coeff)
-            error("If Phi in N-dimentional vector, sigma should be matrix NxN")
+            Base.error("If Phi is N-dimentional vector, sigma should be matrix NxN")
         end
         return new(coeff, basis, sig)
     end
@@ -54,8 +55,8 @@ end
 
 function call(phi::PhiVec, x::Float64)
     res = 0.
-    for i = 1:(length(phi.basis))
-        res += phi.coeff[i] * phi.basis[i]
+    for i = 1:(length(phi.basis.basisFun))
+        res += phi.coeff[i] * phi.basis.basisFun[i].f(x)
     end
     return res
 end
@@ -63,7 +64,7 @@ end
 
 function error(phi::PhiVec, x::Array{Float64, 1})
     if phi.sig == nothing
-        error("Unable to calculate error without sigma matrix")
+        Base.error("Unable to calculate error without sigma matrix")
     end
     #=Calculate error at given point(s)=#
     bfValue = [f.f(x) for f in phi.basis.basisFun]
