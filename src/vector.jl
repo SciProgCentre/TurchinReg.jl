@@ -43,7 +43,7 @@ end
 
 
 function call(phivec::PhiVec, xs::Array{Float64, 1})
-    res = map(x -> call(phivec, x), xs)
+    res = collect(map(x -> call(phivec, x), xs))
     return res
 end
 
@@ -58,5 +58,5 @@ end
 
 
 function errors(phi::PhiVec, xs::Array{Float64})
-    return map(x -> errors(phi, x), xs)
+    return collect(map(x -> errors(phi, x), xs))
 end
