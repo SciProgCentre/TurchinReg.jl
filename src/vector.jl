@@ -1,41 +1,19 @@
-#=
-vector:
-- Julia version: 1.1.0
-- Author: ta_nyan
-- Date: 2019-03-17
-=#
 include("basis.jl")
 
 struct PhiVec
     coeff::Array{Float64}
     basis::Basis
     sig::Union{Array{Float64}, Nothing}
-    #=
-    PhiVec(self, coef, basis, sig=None)
 
-    Generalized Vector for discretization of true function class.
-    Parameters
-    ----------
-    coef : ndarray
-        Coeficient (phi vector) for basis function.
-    basis : Basis
-        basis in which function is described
-    sig : 2darray, optional
-        Covariance matrix of phi vector
-    Returns
-    -------
-    PhiVec : callable
-        Phi vector of function.
-    =#
     function PhiVec(coeff::Array{Float64}, basis::Basis)
-        if Base.length(coeff) != Base.length(basis.basisFun)
+        if Base.length(coeff) != Base.length(basis)
             Base.error("Phi and basis should have equal dimentions")
         end
         return new(coeff, basis, nothing)
     end
 
     function PhiVec(coeff::Array{Float64}, basis::Basis, sig::Array{Float64})
-        if Base.length(coeff) != Base.length(basis.basisFun)
+        if Base.length(coeff) != Base.length(basis)
             Base.error("Phi and basis should have equal dimentions")
         end
         if Base.length(size(sig)) != 2
@@ -46,31 +24,39 @@ struct PhiVec
             Base.error("Sigma matrix should be square")
         end
         if n != Base.length(coeff)
-            Base.error("If Phi is N-dimentional vector, sigma should be matrix NxN")
+            Base.error(
+                "If Phi is N-dimentional vector, sigma should be matrix NxN")
         end
         return new(coeff, basis, sig)
     end
 end
 
 
-function call(phi::PhiVec, x::Float64)
-    res = 0.
-    for i = 1:(length(phi.basis.basisFun))
-        res += phi.coeff[i] * phi.basis.basisFun[i].f(x)
-    end
+Base.length(phivec::PhiVec) = Base.length(phivec.basis)
+
+
+function call(phivec::PhiVec, x::Float64)
+    res = sum(z -> z[1] * z[2].f(x),
+        zip(phivec.coeff, phivec.basis.basis_functions))
     return res
 end
 
 
-function error(phi::PhiVec, x::Array{Float64, 1})
-    if phi.sig == nothing
-        Base.error("Unable to calculate error without sigma matrix")
-    end
-    #=Calculate error at given point(s)=#
-    bfValue = [f.f(x) for f in phi.basis.basisFun]
-    res = zeros(Float64, Base.length(x))
-    for (index, value) in enumerate(bfValue)
-        res[index] = ((transpose(val)*phi.sig)*val)^0.5
-    end
+function call(phivec::PhiVec, xs::Array{Float64, 1})
+    res = map(x -> call(phivec, x), xs)
     return res
+end
+
+
+function errors(phi::PhiVec, x::Float64)
+    if phi.sig == nothing
+        Base.error("Unable to calculate errors without sigma matrix")
+    end
+    bfValue = [func.f(x) for func in phi.basis.basis_functions]
+    return (transpose(bfValue) * phi.sig * bfValue)^0.5
+end
+
+
+function errors(phi::PhiVec, xs::Array{Float64})
+    return map(x -> errors(phi, x), xs)
 end
