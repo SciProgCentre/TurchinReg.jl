@@ -22,7 +22,8 @@ function discretize_kernel(basis::Basis, kernel::Function, xs::Array{Float64, 1}
     for (m, x) in enumerate(xs)
         for (n, func) in enumerate(basis.basis_functions)
             a, b = func.support
-            Kmn[m, n] = quadgk(y -> kernel(y,x) * func.f(y), a, b, rtol=10^-5, maxevals=10^2)[1]
+            res = quadgk(y -> kernel(y, x) * func.f(y), a, b, rtol=10^-5, maxevals=5*10^2)
+            Kmn[m, n] = res[1]
         end
     end
     return Kmn

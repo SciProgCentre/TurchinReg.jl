@@ -12,7 +12,7 @@ mutable struct GaussErrorMatrixUnfolder
     function GaussErrorMatrixUnfolder(
         omegas::Array{Array{Float64, 2} ,1},
         method::String="EmpiricalBayes",
-        alphas::Union{Array{Float64, 1}, Nothing}=nothing
+        alphas::Union{Array{Float64, 1}, Nothing}=nothing,
         )
 
         if Base.length(omegas) == 0
@@ -59,7 +59,7 @@ function solve(
     unfolder::GaussErrorMatrixUnfolder,
     kernel::Array{Float64, 2},
     data::Array{Float64, 1},
-    data_errors::Union{Array{Float64, 1}, Array{Float64, 2}}
+    data_errors::Union{Array{Float64, 1}, Array{Float64, 2}},
     )
 
     println("starting solve")
@@ -93,7 +93,7 @@ function solve_correct(
     unfolder::GaussErrorMatrixUnfolder,
     kernel::Array{Float64, 2},
     data::Array{Float64, 1},
-    data_errors::Array{Float64, 2}
+    data_errors::Array{Float64, 2},
     )
 
     println("starting solve_correct")
@@ -105,29 +105,36 @@ function solve_correct(
 
     function optimal_alpha()
         println("starting optimal_alpha")
-        # function alpha_prob(a::Array{Float64, 1})
-        #     aO = transpose(a)*unfolder.omegas
-        #     BaO = B + aO
-        #     iBaO = inv(BaO)
-        #     dotp = transpose(b) * iBaO * b
-        #     if det(aO) != 0
-        #         detaO = log(abs(det(aO)))
-        #     else
-        #         eigvals_aO = sort(eigvals(aO))
-        #         rank_deficiency = size(aO)[1] - rank(aO)
-        #         detaO = sum(log.(eigvals_aO[(rank_deficiency+1):end]))
-        #     end
-        #     detBaO = log(abs(det(BaO)))
-        #     return (detaO - detBaO) / 2.0 + dotp / 2.0
-        # end
-        #
-        # a0 = zeros(Float64, Base.length(unfolder.omegas))
+        function alpha_prob(a::Array{Float64, 1})
+            aO = transpose(a)*unfolder.omegas
+            BaO = B + aO
+            iBaO = inv(BaO)
+            dotp = transpose(b) * iBaO * b
+            if det(aO) != 0
+                detaO = log(abs(det(aO)))
+            else
+                eigvals_aO = sort(eigvals(aO))
+                rank_deficiency = size(aO)[1] - rank(aO)
+                detaO = sum(log.(eigvals_aO[(rank_deficiency+1):end]))
+            end
+            detBaO = log(abs(det(BaO)))
+            return (detaO - detBaO) / 2.0 + dotp / 2.0
+        end
+
+        a0 = zeros(Float64, Base.length(unfolder.omegas))
         println("starting optimize")
-#         res = optimize(a -> -alpha_prob(exp.(a)), a0,  BFGS())
-#         if !Optim.converged(res)
-#             Base.error("Minimization did not succeed")
-#         end
-        return [0.5] #exp.(Optim.minimizer(res))
+        v = Float64[]
+        for i in range(-80, 5, length=200)
+            push!(v, -alpha_prob(exp.([i])))
+        end
+        println(v)
+
+        res = optimize(a -> -alpha_prob(exp.(a)), a0,  BFGS(), Optim.Options(x_tol=1e-8, show_trace=true, store_trace=true, allow_f_increases=true))
+        println(res)
+        if !Optim.converged(res)
+            Base.error("Minimization did not succeed")
+        end
+        return exp.(Optim.minimizer(res))
     end
 
     if unfolder.method == "EmpiricalBayes"
@@ -149,7 +156,7 @@ mutable struct GaussErrorUnfolder
         basis::Basis,
         omegas::Array,
         method::String="EmpiricalBayes",
-        alphas::Union{Array{Float64, 1}, Nothing}=nothing
+        alphas::Union{Array{Float64, 1}, Nothing}=nothing,
         )
 
         solver = GaussErrorMatrixUnfolder(omegas, method, alphas)
