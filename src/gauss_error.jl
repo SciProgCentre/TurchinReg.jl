@@ -123,11 +123,11 @@ function solve_correct(
 
         a0 = zeros(Float64, Base.length(unfolder.omegas))
         println("starting optimize")
-        v = Float64[]
-        for i in range(-80, 5, length=200)
-            push!(v, -alpha_prob(exp.([i])))
-        end
-        println(v)
+#         v = Float64[]
+#         for i in range(-80, 5, length=200)
+#             push!(v, -alpha_prob(exp.([i])))
+#         end
+#         println(v)
 
         res = optimize(a -> -alpha_prob(exp.(a)), a0,  BFGS(), Optim.Options(x_tol=1e-8, show_trace=true, store_trace=true, allow_f_increases=true))
         println(res)
@@ -169,7 +169,7 @@ function solve(
     kernel::Union{Function, Array{Float64, 2}},
     data::Union{Function, Array{Float64, 1}},
     data_errors::Union{Function, Array{Float64, 1}},
-    y::Union{Array{Float64, 1}, Nothing}
+    y::Union{Array{Float64, 1}, Nothing},
     )
 
     println("starting solve")

@@ -60,99 +60,84 @@ end
     end
     for i = 1:basis.n
         val = ((i * pi) / delta) ^ (2 * deg) * delta / 2
-        temp[2 * i - 1] = val
         temp[2 * i] = val
+        temp[2 * i + 1] = val
     end
     return [cat(temp...; dims=(1,2))]
 end
 
 
 #TODO: нормально написать
-# struct CubicSplineBasis <: Basis
-#     a::Float64
-#     b::Float64
-#     knots::Array{Float64}
-#     basis_functions::Array
-#
-#     function basis_functionscCubicSplines(a::Float64, b::Float64, knots::Array{Float64}, boundary::Union{Tuple, Nothing})
-#         basis_functions = []
-#         for i = 1:lenght(knots)
-#             ys = zeros(Float64, length(knots))
-#             ys[i] = 1.
-#             func = Spline1D(knots, ys)
-#             support = (a, b)
-#             push!(basis_functions, BaseFunction(func, support))
-#             #TODO: сделать нормальный сплайн. с таким не будут работать краевые условия
-#         end
-#
-#         function apply_cnd!(cnd::Union{String, Nothing}, side::String, basis_functions::Array)
-#             if cnd == nothing
-#                 return basis_functions
-#             end
-#
-#             if cnd == "dirichlet"
-#                 if side == "l"
-#                     return basis_functions[2:lenght(basis_functions)]
-#                 elseif side == "r"
-#                     return basis_functions[1:lenght(basis_functions)-1]
-#                 else
-#                     Base.error("CubicSpline: Unknown boundary side: " + side)
-#                 end
-#             end
-#             Base.error("CubicSpline: Unknown boundary condition: " + cnd)
-#         end
-#
-#         if boundary != nothing
-#             if length(boundary) == 2
-#                 l,r = boundary
-#                 apply_cnd(l, "l", basis_functions)
-#                 apply_cnd(r, "r", basis_functions)
-#             elseif length(boundary) == 1
-#                 apply_cnd(boundary, "l", basis_functions)
-#                 apply_cnd(boundary, "r", basis_functions)
-#             else
-#                 Base.error("Boundary conditions should be tuple")
-#             end
-#         end
-#         return basis_functions
-#     end
-#
-#     CubicSplineBasis(a::Float64, b::Float64, knots::Array{Float64}, boundary::Union{Tuple, Nothing}=nothing) = new(knots[1], knots[lenght(knots)], knots, basis_functionscCubicSplines(a, b, knots, boundary))
-#
-# end
-#
-# @memoize function omega(basis::CubicSplineBasis, deg::Int32, equalize::Bool=False)
-#     #=
-#         Calculate matrix of second derivatives for regularization matrix.
-#
-#         Parameters
-#         ----------
-#         deg       : int
-#             Number of differentiations in omega operator
-#         equalize : (optional) bool
-#             If set to true integral will be weighted to ensure that
-#             they contribute equally
-#         =#
-#     function spline_derivative(deg::Int32, spl, x::Array)
-#         return derivative(spl, x, deg)
-#     end
-#
-#     pp = [spline_derivative(deg, basis_functions, x) for basis_functions in basis.basis_functions]
-#     pdeg  = 2 * (3 - deg) + 1
-#     n = length(basis)
-#     omega = zeros(Float64, n, n)
-#     for i = 1:n
-#         for j = 1:(i+1)
-#             c1 = pp[i].c
-#             c2 = pp[j].c
-#             c = zeros(Int32, pdeg, size(c1)[2] )
-#             for k1 = 1:(3 - deg +1)
-#                 for k2 = 1:(3 - deg +1)
-#                     c[k1+k2] = c[k1+k2] + c1[k1] * c2[k2]
-#                 end
-#             end
-#             p = 1
-#             #TODO: разобраться с омегой
-#         end
-#     end
-# end
+struct CubicSplineBasis <: Basis
+    a::Float64
+    b::Float64
+    knots::Array{Float64}
+    basis_functions::Array
+
+    function basis_functions_cubic_splines(a::Float64, b::Float64, knots::Array{Float64}, boundary::Union{Tuple, Nothing})
+        basis_functions = []
+        for i = 1:lenght(knots)
+            ys = zeros(Float64, Base.length(knots))
+            ys[i] = 1.
+            func = Spline1D(knots, ys)
+            support = (a, b)
+            push!(basis_functions, BaseFunction(func, support))
+        end
+
+        function apply_cnd(cnd::Union{String, Nothing}, side::String, basis_functions::Array)
+            if cnd == nothing
+                return basis_functions
+            end
+
+            if cnd == "dirichlet"
+                if side == "left"
+                    return basis_functions[2:end]
+                elseif side == "right"
+                    return basis_functions[1:end-1]
+                else
+                    Base.error("CubicSpline: Unknown boundary side: " + side)
+                end
+            end
+            Base.error("CubicSpline: Unknown boundary condition: " + cnd)
+        end
+
+        if boundary != nothing
+            if length(boundary) == 2
+                l,r = boundary
+                apply_cnd(l, "left", basis_functions)
+                apply_cnd(r, "right", basis_functions)
+            elseif length(boundary) == 1
+                apply_cnd(boundary, "left", basis_functions)
+                apply_cnd(boundary, "right", basis_functions)
+            else
+                Base.error("Boundary conditions should be Tuple or Nothing")
+            end
+        end
+        return basis_functions
+    end
+
+    CubicSplineBasis(a::Float64, b::Float64, knots::Array{Float64}, boundary::Union{Tuple, Nothing}=nothing) = new(knots[1], knots[lenght(knots)], knots, basis_functions_cubic_splines(a, b, knots, boundary))
+
+end
+
+@memoize function omega(basis::CubicSplineBasis, deg::Int32, equalize::Bool=false)
+    spline_derivative(deg::Int32, spl, x::Array) = derivative(spl, x, deg)
+    pp = [spline_derivative(deg, basis_function.f, x) for basis_function in basis.basis_functions]
+    pdeg  = 2 * (3 - deg) + 1
+    n = Base.length(basis)
+    omega = zeros(Float64, n, n)
+    for i = 1:n
+        for j = 1:(i+1)
+            c1 = pp[i].c
+            c2 = pp[j].c
+            c = zeros(Int32, pdeg, size(c1)[2] )
+            for k1 = 1:(3 - deg +1)
+                for k2 = 1:(3 - deg +1)
+                    c[k1+k2] = c[k1+k2] + c1[k1] * c2[k2]
+                end
+            end
+            p = 1
+            #TODO: разобраться с омегой
+        end
+    end
+end
