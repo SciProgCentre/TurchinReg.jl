@@ -65,25 +65,25 @@ function solve(
     println("starting solve")
     m, n = size(kernel)
     if n != unfolder.n
-        Base.error("Kernel and unfolder must have equal dimentions.")# Got " + String{(m, n)} + "and " + String{n})
+        Base.error("Kernel and unfolder must have equal dimentions.")
     end
 
     if size(data)[1] != m
-        Base.error("K and f must be (m,n) and (m,) dimensional.")# Got " + String{(m, n)} + "and " + String{size(data)})
+        Base.error("K and f must be (m,n) and (m,) dimensional.")
     end
 
     if length(size(data_errors)) == 1
         data_errors = cat(data_errors...; dims=(1,2))
     elseif length(size(data_errors)) != 2
-        Base.error("Sigma matrix must be two-dimensional.")# Got " + String{length(size(data_errors))})
+        Base.error("Sigma matrix must be two-dimensional.")
     end
 
     if size(data_errors)[1] != size(data_errors)[2]
-        Base.error("Sigma matrix must be square.")# Got " + String{size(data_errors)})
+        Base.error("Sigma matrix must be square.")
     end
 
     if size(data)[1] != size(data_errors)[1]
-        Base.error("Sigma matrix and f must have equal dimensions.")# Got " + String{size(data)} + "end " + String{size(data_errors)[1]})
+        Base.error("Sigma matrix and f must have equal dimensions.")
     end
     println("ending solve")
     return solve_correct(unfolder, kernel, data, data_errors)
@@ -129,8 +129,11 @@ function solve_correct(
 #         end
 #         println(v)
 
-        res = optimize(a -> -alpha_prob(exp.(a)), a0,  BFGS(), Optim.Options(x_tol=1e-8, show_trace=true, store_trace=true, allow_f_increases=true))
-        println(res)
+        res = optimize(
+            a -> -alpha_prob(exp.(a)), a0,  BFGS(),
+            Optim.Options(x_tol=X_TOL_OPTIM, show_trace=true,
+            store_trace=true, allow_f_increases=true))
+
         if !Optim.converged(res)
             Base.error("Minimization did not succeed")
         end
