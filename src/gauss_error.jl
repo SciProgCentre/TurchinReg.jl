@@ -123,11 +123,6 @@ function solve_correct(
 
         a0 = zeros(Float64, Base.length(unfolder.omegas))
         println("starting optimize")
-#         v = Float64[]
-#         for i in range(-80, 5, length=200)
-#             push!(v, -alpha_prob(exp.([i])))
-#         end
-#         println(v)
 
         res = optimize(
             a -> -alpha_prob(exp.(a)), a0,  BFGS(),

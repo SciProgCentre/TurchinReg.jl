@@ -1,11 +1,12 @@
 include("config.jl")
-using QuadGK, LinearAlgebra, Dierckx, Memoize
+using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
 
 
 struct BaseFunction
-    f::Function
+    f
     support::Tuple{Float64, Float64}
-    BaseFunction(f::Function, a::Float64, b::Float64) = new(f, (a, b))
+    BaseFunction(f, support::Tuple{Float64,Float64}) = new(f, support)
+    BaseFunction(f, a::Float64, b::Float64) = new(f, (a, b))
 end
 
 
@@ -75,9 +76,9 @@ struct CubicSplineBasis <: Basis
     knots::Array{Float64}
     basis_functions::Array
 
-    function basis_functions_cubic_splines(a::Float64, b::Float64, knots::Array{Float64}, boundary::Union{Tuple, Nothing})
+    function basis_functions_cubic_splines(a::Float64, b::Float64, knots::Array{Float64}, boundary::Union{Tuple, Nothing}=nothing)
         basis_functions = []
-        for i = 1:lenght(knots)
+        for i = 1:length(knots)
             ys = zeros(Float64, Base.length(knots))
             ys[i] = 1.
             func = Spline1D(knots, ys)
@@ -117,28 +118,79 @@ struct CubicSplineBasis <: Basis
         return basis_functions
     end
 
-    CubicSplineBasis(a::Float64, b::Float64, knots::Array{Float64}, boundary::Union{Tuple, Nothing}=nothing) = new(knots[1], knots[lenght(knots)], knots, basis_functions_cubic_splines(a, b, knots, boundary))
+    CubicSplineBasis(
+        a::Float64, b::Float64, knots::Array{Float64},
+        boundary::Union{Tuple, Nothing}=nothing) = new(knots[1], knots[length(knots)], knots,
+        basis_functions_cubic_splines(a, b, knots, boundary))
 
 end
 
-@memoize function omega(basis::CubicSplineBasis, deg::Int32, equalize::Bool=false)
-    spline_derivative(deg::Int32, spl, x::Array) = derivative(spl, x, deg)
-    pp = [spline_derivative(deg, basis_function.f, x) for basis_function in basis.basis_functions]
-    pdeg  = 2 * (3 - deg) + 1
+@memoize function omega(basis::CubicSplineBasis, deg::Int64)
     n = Base.length(basis)
     omega = zeros(Float64, n, n)
     for i = 1:n
-        for j = 1:(i+1)
-            c1 = pp[i].c
-            c2 = pp[j].c
-            c = zeros(Int32, pdeg, size(c1)[2] )
-            for k1 = 1:(3 - deg +1)
-                for k2 = 1:(3 - deg +1)
-                    c[k1+k2] = c[k1+k2] + c1[k1] * c2[k2]
-                end
+        for j = i:n
+            a_i, b_i = basis.basis_functions[i].support
+            a_j, b_j = basis.basis_functions[j].support
+            a, b = max(a_i, a_j), min(b_i, b_j)
+            if a<b
+                omega[i, j] = quadgk(
+                    x -> derivative(basis.basis_functions[i].f, x, deg)*derivative(basis.basis_functions[j].f, x, deg),
+                    a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK)[1]
+                omega[j, i] = omega[i, j]
             end
-            p = 1
-            #TODO: разобраться с омегой
         end
     end
+    return [omega]
+end
+
+
+#TODO: использовать библиотеку, чтобы это быстро считалось
+function legendre_polynomial(n::Int64, x::Float64)
+    if n == 0
+        return 1.
+    elseif n == 1
+        return x
+    else
+        return (2 * n -1) / n * x * legendre_polynomial(n-1, x) - (n - 1) / n * legendre_polynomial(n-2, x)
+    end
+end
+
+struct LegendreBasis <: Basis
+    a::Float64
+    b::Float64
+    basis_functions::Array
+
+    function basis_functions_legendre(a::Float64, b::Float64, n::Int64)
+        basis_functions = []
+        for i = 1:n
+            func_ = Fun(Legendre(), [zeros(i-1);1])
+            func = x -> func_(2 * (x - a) / (b - a) - 1)
+            support = (a, b)
+            push!(basis_functions, BaseFunction(func, support))
+        end
+        return basis_functions
+    end
+
+    LegendreBasis(a::Float64, b::Float64, n::Int64) = new(a, b, basis_functions_legendre(a, b, n))
+end
+
+
+@memoize function omega(basis::LegendreBasis, deg::Int64)
+    n = Base.length(basis)
+    omega = zeros(Float64, n, n)
+    D = Derivative()
+    for i = 1:n
+        for j = i:n
+            func_i = Fun(Legendre(), [zeros(i-1);1])
+            func_j = Fun(Legendre(), [zeros(j-1);1])
+            der_func_i = D^deg * func_i
+            der_func_j = D^deg * func_j
+            omega[i, j] = quadgk(
+            x -> (2 / (b - a))^(2 * deg) * der_func_i(2 * (x - a) / (b - a) - 1) * der_func_j(2 * (x - a) / (b - a) - 1),
+            a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK)[1]
+            omega[j, i] = omega[i, j]
+        end
+    end
+    return [omega]
 end
