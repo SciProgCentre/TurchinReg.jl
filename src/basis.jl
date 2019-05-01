@@ -16,15 +16,14 @@ abstract type Basis end
 Base.length(basis::Basis) = Base.length(basis.basis_functions)
 
 
-Base.get(basis::Basis, i) = basis.basis_functions[i]
-
-
 function discretize_kernel(basis::Basis, kernel::Function, xs::Array{Float64, 1})
     Kmn = zeros(Float64, Base.length(xs), Base.length(basis))
     for (m, x) in enumerate(xs)
         for (n, func) in enumerate(basis.basis_functions)
             a, b = func.support
-            res = quadgk(y -> kernel(y, x) * func.f(y), a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK)
+            res = quadgk(y -> kernel(y, x) * func.f(y),
+                a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK
+                )
             Kmn[m, n] = res[1]
         end
     end
@@ -41,7 +40,7 @@ struct FourierBasis <: Basis
     function basis_functions_fourier(n::Int64, a::Float64, b::Float64)
         l = (b - a) / 2.
         mid = (a + b) / 2.
-        func = [BaseFunction(x -> 0.5, a, b)]
+        func = [BaseFunction(x::Float64 -> 0.5, a, b)]
         for i = 1:n
             push!(func, BaseFunction(x::Float64 -> cos(i * pi * (x - mid) / l), a, b))
             push!(func, BaseFunction(x::Float64 -> sin(i * pi * (x - mid) / l), a, b))
@@ -49,7 +48,9 @@ struct FourierBasis <: Basis
         return func
     end
 
-    FourierBasis(a::Float64, b::Float64, n::Int64) = new(a, b, n, basis_functions_fourier(n, a, b))
+    FourierBasis(a::Float64, b::Float64, n::Int64) = new(
+        a, b, n, basis_functions_fourier(n, a, b)
+        )
 end
 
 
@@ -69,14 +70,17 @@ end
 end
 
 
-#TODO: нормально написать
+#TODO: find suitable basis functions
 struct CubicSplineBasis <: Basis
     a::Float64
     b::Float64
     knots::Array{Float64}
     basis_functions::Array
 
-    function basis_functions_cubic_splines(a::Float64, b::Float64, knots::Array{Float64}, boundary::Union{Tuple, Nothing}=nothing)
+    function basis_functions_cubic_splines(
+        a::Float64, b::Float64, knots::Array{Float64},
+        boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}})
+
         basis_functions = []
         for i = 1:length(knots)
             ys = zeros(Float64, Base.length(knots))
@@ -86,42 +90,42 @@ struct CubicSplineBasis <: Basis
             push!(basis_functions, BaseFunction(func, support))
         end
 
-        function apply_cnd(cnd::Union{String, Nothing}, side::String, basis_functions::Array)
-            if cnd == nothing
+        function apply_condition(
+            condition::Union{String, Nothing}, side::String, basis_functions::Array
+            )
+
+            if condition == nothing
                 return basis_functions
             end
 
-            if cnd == "dirichlet"
+            if condition == "dirichlet"
                 if side == "left"
                     return basis_functions[2:end]
-                elseif side == "right"
-                    return basis_functions[1:end-1]
                 else
-                    Base.error("CubicSpline: Unknown boundary side: " + side)
+                    return basis_functions[1:end-1]
                 end
             end
-            Base.error("CubicSpline: Unknown boundary condition: " + cnd)
+            Base.error(
+            "BernsteinPolynomial: Unknown boundary condition: " + condition)
         end
 
-        if boundary != nothing
-            if length(boundary) == 2
-                l,r = boundary
-                apply_cnd(l, "left", basis_functions)
-                apply_cnd(r, "right", basis_functions)
-            elseif length(boundary) == 1
-                apply_cnd(boundary, "left", basis_functions)
-                apply_cnd(boundary, "right", basis_functions)
-            else
-                Base.error("Boundary conditions should be Tuple or Nothing")
-            end
-        end
+        left_condition, right_condition = boundary_condition
+        basis_functions = apply_condition(left_condition, "left", basis_functions)
+        basis_functions = apply_condition(right_condition, "right", basis_functions)
+
         return basis_functions
     end
 
-    CubicSplineBasis(
-        a::Float64, b::Float64, knots::Array{Float64},
-        boundary::Union{Tuple, Nothing}=nothing) = new(knots[1], knots[length(knots)], knots,
-        basis_functions_cubic_splines(a, b, knots, boundary))
+    function CubicSplineBasis(a::Float64, b::Float64, knots::Array{Float64},
+        boundary_condition::Union{Tuple{Union{String, Nothing}, Union{String, Nothing}}, Nothing, String}=nothing)
+        if typeof(boundary_condition) == String || typeof(boundary_condition) == Nothing
+            return new(knots[1], knots[length(knots)], knots,
+            basis_functions_cubic_splines(a, b, knots, (boundary_condition, boundary_condition)))
+        else
+            return new(knots[1], knots[length(knots)], knots,
+            basis_functions_cubic_splines(a, b, knots, boundary_condition))
+        end
+    end
 
 end
 
@@ -135,8 +139,9 @@ end
             a, b = max(a_i, a_j), min(b_i, b_j)
             if a<b
                 omega[i, j] = quadgk(
-                    x -> derivative(basis.basis_functions[i].f, x, deg)*derivative(basis.basis_functions[j].f, x, deg),
-                    a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK)[1]
+                    x::Float64 -> derivative(basis.basis_functions[i].f, x, deg)
+                        *derivative(basis.basis_functions[j].f, x, deg),
+                        a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK)[1]
                 omega[j, i] = omega[i, j]
             end
         end
@@ -144,17 +149,6 @@ end
     return [omega]
 end
 
-
-#TODO: использовать библиотеку, чтобы это быстро считалось
-function legendre_polynomial(n::Int64, x::Float64)
-    if n == 0
-        return 1.
-    elseif n == 1
-        return x
-    else
-        return (2 * n -1) / n * x * legendre_polynomial(n-1, x) - (n - 1) / n * legendre_polynomial(n-2, x)
-    end
-end
 
 struct LegendreBasis <: Basis
     a::Float64
@@ -165,19 +159,23 @@ struct LegendreBasis <: Basis
         basis_functions = []
         for i = 1:n
             func_ = Fun(Legendre(), [zeros(i-1);1])
-            func = x -> func_(2 * (x - a) / (b - a) - 1)
+            func = x::Float64 -> func_(2 * (x - a) / (b - a) - 1)
             support = (a, b)
             push!(basis_functions, BaseFunction(func, support))
         end
         return basis_functions
     end
 
-    LegendreBasis(a::Float64, b::Float64, n::Int64) = new(a, b, basis_functions_legendre(a, b, n))
+    LegendreBasis(a::Float64, b::Float64, n::Int64) = new(
+        a, b, basis_functions_legendre(a, b, n)
+        )
 end
 
 
 @memoize function omega(basis::LegendreBasis, deg::Int64)
     n = Base.length(basis)
+    a = basis.a
+    b = basis.b
     omega = zeros(Float64, n, n)
     D = Derivative()
     for i = 1:n
@@ -187,10 +185,129 @@ end
             der_func_i = D^deg * func_i
             der_func_j = D^deg * func_j
             omega[i, j] = quadgk(
-            x -> (2 / (b - a))^(2 * deg) * der_func_i(2 * (x - a) / (b - a) - 1) * der_func_j(2 * (x - a) / (b - a) - 1),
+            x::Float64 -> (2 / (b - a))^(2 * deg) *
+            der_func_i(2 * (x - a) / (b - a) - 1) *
+            der_func_j(2 * (x - a) / (b - a) - 1),
             a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK)[1]
             omega[j, i] = omega[i, j]
         end
     end
+    return [omega]
+end
+
+
+#TODO: не работает из-за вырождения омеги
+struct BernsteinBasis <: Basis
+    a::Float64
+    b::Float64
+    basis_functions::Array
+    boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}}
+
+    @memoize function basis_functions_bernstein(
+        a::Float64, b::Float64, n::Int64,
+        boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}}
+        )
+
+        basis_functions = []
+        for k = 0:n
+            coeff = convert(Float64, binomial(BigInt(n),BigInt(k)))
+            println(coeff)
+            func = x::Float64 -> coeff  *
+                ((x - a) / (b - a))^k *
+                (1 - ((x - a) / (b - a)))^(n - k)
+            support = (a, b)
+            push!(basis_functions, BaseFunction(func, support))
+        end
+
+        function apply_condition(
+            condition::Union{String, Nothing}, side::String, basis_functions::Array
+            )
+
+            if condition == nothing
+                return basis_functions
+            end
+
+            if condition == "dirichlet"
+                if side == "left"
+                    return basis_functions[2:end]
+                else
+                    return basis_functions[1:end-1]
+                end
+            end
+            Base.error(
+            "BernsteinPolynomial: Unknown boundary condition: " + condition)
+        end
+
+        left_condition, right_condition = boundary_condition
+        basis_functions = apply_condition(left_condition, "left", basis_functions)
+        basis_functions = apply_condition(right_condition, "right", basis_functions)
+
+        return basis_functions
+    end
+
+    function BernsteinBasis(a::Float64, b::Float64, n::Int64,
+    boundary_condition::Union{Tuple{Union{String, Nothing}, Union{String, Nothing}}, Nothing, String}=nothing)
+        if typeof(boundary_condition) == String || typeof(boundary_condition) == Nothing
+            return new(a, b, basis_functions_bernstein(a, b, n, (boundary_condition, boundary_condition)), (boundary_condition, boundary_condition))
+        else
+            return return new(a, b, basis_functions_bernstein(a, b, n, boundary_condition), boundary_condition)
+        end
+    end
+end
+
+@memoize function omega(basis::BernsteinBasis, deg::Int64)
+    left_condition, right_condition = basis.boundary_condition
+    n = Base.length(basis) - 1
+    a = basis.a
+    b = basis.b
+
+    @memoize function basis_function_bernstein(k::Int64, n::Int64, x::Float64)
+        if k < 0 || n < 0 || k > n
+            return 0.
+        end
+        coeff = convert(Float64, binomial(BigInt(n),BigInt(k)))
+        return coeff *
+            ((x - a) / (b - a))^k *
+            (1 - ((x - a) / (b - a)))^(n - k)
+    end
+
+    @memoize function derivative(k::Int64, n::Int64, l::Int64, x::Float64)
+        coeff = [convert(Float64, binomial(BigInt(l),BigInt(j))) for j = 0:l]
+        basis_functions = [basis_function_bernstein(k-j, n-l, x) for j = 0:l]
+        return convert(Float64, binomial(BigInt(n),BigInt(l)) * factorial(BigInt(l))) /
+            (b - a)^l * sum(coeff .* basis_functions)
+    end
+
+    begin_function_number = 0
+    end_function_number = n
+    n_true_value = n
+
+    if left_condition == "dirichlet"
+        n_true_value += 1
+    end
+
+    if right_condition == "dirichlet"
+        n_true_value += 1
+    end
+
+    omega = zeros(Float64, n_true_value+1, n_true_value+1)
+
+    for i = 0:n_true_value
+        for j = i:n_true_value
+            omega[i+1, j+1] = quadgk(
+            x::Float64 -> derivative(i, n_true_value, deg, x) * derivative(j, n_true_value, deg, x),
+            a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK)[1]
+            omega[j+1, i+1] = omega[i+1, j+1]
+        end
+    end
+
+    if left_condition == "dirichlet"
+        omega = omega[2:end, 2:end]
+    end
+
+    if right_condition == "dirichlet"
+        omega = omega[1:end-1, 1:end-1]
+    end
+
     return [omega]
 end

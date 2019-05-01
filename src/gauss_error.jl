@@ -101,13 +101,16 @@ function solve_correct(
     Kt = transpose(kernel)
     data_errorsInv = inv(data_errors)
     B = Kt * data_errorsInv * K
-    b = Kt * data_errorsInv * data
+    b = Kt * transpose(data_errorsInv) * data
 
     function optimal_alpha()
         println("starting optimal_alpha")
         function alpha_prob(a::Array{Float64, 1})
             aO = transpose(a)*unfolder.omegas
             BaO = B + aO
+            if det(BaO) == 0
+                println("det(BaO) = 0")
+            end
             iBaO = inv(BaO)
             dotp = transpose(b) * iBaO * b
             if det(aO) != 0
@@ -115,14 +118,18 @@ function solve_correct(
             else
                 eigvals_aO = sort(eigvals(aO))
                 rank_deficiency = size(aO)[1] - rank(aO)
-                detaO = sum(log.(eigvals_aO[(rank_deficiency+1):end]))
+                detaO = sum(log.(abs.(eigvals_aO[(rank_deficiency+1):end])))
             end
             detBaO = log(abs(det(BaO)))
-            return (detaO - detBaO) / 2.0 + dotp / 2.0
+            return detaO - detBaO + dotp
         end
 
         a0 = zeros(Float64, Base.length(unfolder.omegas))
         println("starting optimize")
+
+        my_alphas = collect(range(-100, 3, length=500))
+        alphas = [[exp(my_alpha)] for my_alpha in my_alphas]
+        plot(exp.(my_alphas), -alpha_prob.(alphas))
 
         res = optimize(
             a -> -alpha_prob(exp.(a)), a0,  BFGS(),
