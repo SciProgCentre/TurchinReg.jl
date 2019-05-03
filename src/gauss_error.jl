@@ -137,9 +137,15 @@ function solve_correct(
             store_trace=true, allow_f_increases=true))
 
         if !Optim.converged(res)
-            Base.error("Minimization did not succeed")
+            # Base.error("Minimization did not succeed")
+            println("Minimization did not succeed")
+            return [0.05]
         end
-        return exp.(Optim.minimizer(res))
+        alpha = exp.(Optim.minimizer(res))
+        if (alpha[1] - 0.) < 1e-6 || alpha[1] > 1e3
+            alpha = [0.05]
+        end
+        return alpha
     end
 
     if unfolder.method == "EmpiricalBayes"

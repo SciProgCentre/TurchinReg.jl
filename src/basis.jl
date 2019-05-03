@@ -1,4 +1,5 @@
 include("config.jl")
+include("b_spline_implementation.jl")
 using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
 
 
@@ -80,12 +81,10 @@ struct CubicSplineBasis <: Basis
     function basis_functions_cubic_splines(
         a::Float64, b::Float64, knots::Array{Float64},
         boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}})
-
+        k = 3
         basis_functions = []
-        for i = 1:length(knots)
-            ys = zeros(Float64, Base.length(knots))
-            ys[i] = 1.
-            func = Spline1D(knots, ys)
+        for i = 0:(length(knots)-5)
+            func = BSpline(i, k, knots)
             support = (a, b)
             push!(basis_functions, BaseFunction(func, support))
         end
@@ -116,14 +115,17 @@ struct CubicSplineBasis <: Basis
         return basis_functions
     end
 
-    function CubicSplineBasis(a::Float64, b::Float64, knots::Array{Float64},
+    function CubicSplineBasis(knots::Array{Float64},
         boundary_condition::Union{Tuple{Union{String, Nothing}, Union{String, Nothing}}, Nothing, String}=nothing)
+
+        knots = append!(append!([knots[1], knots[1], knots[1]], knots), [knots[end], knots[end], knots[end]])
+
         if typeof(boundary_condition) == String || typeof(boundary_condition) == Nothing
             return new(knots[1], knots[length(knots)], knots,
-            basis_functions_cubic_splines(a, b, knots, (boundary_condition, boundary_condition)))
+                basis_functions_cubic_splines(a, b, knots, (boundary_condition, boundary_condition)))
         else
             return new(knots[1], knots[length(knots)], knots,
-            basis_functions_cubic_splines(a, b, knots, boundary_condition))
+                basis_functions_cubic_splines(a, b, knots, boundary_condition))
         end
     end
 
@@ -136,14 +138,19 @@ end
         for j = i:n
             a_i, b_i = basis.basis_functions[i].support
             a_j, b_j = basis.basis_functions[j].support
-            a, b = max(a_i, a_j), min(b_i, b_j)
-            if a<b
+            # a, b = max(a_i, a_j), min(b_i, b_j)
+            a, b = basis.a, basis.b
+            # if a < b
                 omega[i, j] = quadgk(
-                    x::Float64 -> derivative(basis.basis_functions[i].f, x, deg)
-                        *derivative(basis.basis_functions[j].f, x, deg),
+                    x::Float64 -> derivative(basis.basis_functions[i].f, x, deg) * derivative(basis.basis_functions[j].f, x, deg),
                         a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK)[1]
+                if omega[i, j] == 0 && i == j
+                    println("omega[i, j] = 0 !!!")
+                    q = collect(range(a, b, length=500))
+                    plot(q, [derivative(basis.basis_functions[i].f, x, deg) * derivative(basis.basis_functions[j].f, x, deg) for x in q])
+                end
                 omega[j, i] = omega[i, j]
-            end
+            # end
         end
     end
     return [omega]
