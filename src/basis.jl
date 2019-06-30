@@ -23,7 +23,7 @@ function discretize_kernel(basis::Basis, kernel::Function, xs::Array{Float64, 1}
         for (n, func) in enumerate(basis.basis_functions)
             a, b = func.support
             res = quadgk(y -> kernel(y, x) * func.f(y),
-                a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK
+                a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=100
                 )
             Kmn[m, n] = res[1]
         end
@@ -71,7 +71,6 @@ end
 end
 
 
-#TODO: find suitable basis functions
 struct CubicSplineBasis <: Basis
     a::Float64
     b::Float64
@@ -87,6 +86,7 @@ struct CubicSplineBasis <: Basis
             func = BSpline(i, k, knots)
             support = (a, b)
             push!(basis_functions, BaseFunction(func, support))
+#             println("b_spline: i=", i, " k=", k, " knots=", knots)
         end
 
         function apply_condition(
@@ -143,7 +143,7 @@ end
             # if a < b
                 omega[i, j] = quadgk(
                     x::Float64 -> derivative(basis.basis_functions[i].f, x, deg) * derivative(basis.basis_functions[j].f, x, deg),
-                        a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK)[1]
+                        a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=100)[1]
                 if omega[i, j] == 0 && i == j
                     println("omega[i, j] = 0 !!!")
                     q = collect(range(a, b, length=500))
@@ -195,7 +195,7 @@ end
             x::Float64 -> (2 / (b - a))^(2 * deg) *
             der_func_i(2 * (x - a) / (b - a) - 1) *
             der_func_j(2 * (x - a) / (b - a) - 1),
-            a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK)[1]
+            a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=100)[1]
             omega[j, i] = omega[i, j]
         end
     end
@@ -303,7 +303,7 @@ end
         for j = i:n_true_value
             omega[i+1, j+1] = quadgk(
             x::Float64 -> derivative(i, n_true_value, deg, x) * derivative(j, n_true_value, deg, x),
-            a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK)[1]
+            a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=100)[1]
             omega[j+1, i+1] = omega[i+1, j+1]
         end
     end

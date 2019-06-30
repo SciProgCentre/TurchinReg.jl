@@ -108,9 +108,9 @@ function solve_correct(
         function alpha_prob(a::Array{Float64, 1})
             aO = transpose(a)*unfolder.omegas
             BaO = B + aO
-            if det(BaO) == 0
-                println("det(BaO) = 0")
-            end
+#             if det(BaO) == 0
+#                 println("det(BaO) = 0")
+#             end
             iBaO = inv(BaO)
             dotp = transpose(b) * iBaO * b
             if det(aO) != 0
@@ -143,6 +143,7 @@ function solve_correct(
         end
         alpha = exp.(Optim.minimizer(res))
         if (alpha[1] - 0.) < 1e-6 || alpha[1] > 1e3
+            println("Incorrect alpha")
             alpha = [0.05]
         end
         return alpha

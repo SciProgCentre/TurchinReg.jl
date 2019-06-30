@@ -8,9 +8,11 @@ struct BSpline
 
     function BSpline(i::Int64, k::Int64, knots::Array{Float64})
 
+        eps = 10^-9
+
         function b_spline_function(i::Int64, k::Int64, x::Float64, knots::Array{Float64})
             if  k == 0
-                if x >= knots[i+1] && x <= knots[i+2]
+                if x >= knots[i+1] && x < knots[i+2]
                     return 1.
                 else
                     return 0.
@@ -18,12 +20,12 @@ struct BSpline
             end
             first = 0.
             second = 0.
-            if knots[i+k+1]-knots[i+1] != 0
+            if !isapprox(abs(knots[i+k+1]-knots[i+1]) + 1, 1)
                 first = (x-knots[i+1])/
                     (knots[i+k+1]-knots[i+1])*b_spline_function(i, k-1, x, knots)
             end
 
-            if knots[i+k+1+1]-knots[i+1+1] != 0
+            if !isapprox(abs(knots[i+k+1+1]-knots[i+1+1]) + 1, 1)
                 second = (knots[i+k+1+1]-x)/
                     (knots[i+k+1+1]-knots[i+1+1])*b_spline_function(i+1, k-1, x, knots)
             end
@@ -47,11 +49,11 @@ function derivative(b_spline::BSpline, x::Float64, deg::Int64)
     end
     first = 0.
     second = 0.
-    if knots[i+k+1]-knots[i+1] != 0
-        first = k * derivative(BSpline(i, k-1, knots), x, deg-1) / (knots[i+k+1] - knots[i+1])
+    if !isapprox(abs(knots[i+k+1]-knots[i+1]) + 1, 1)
+        first = derivative(BSpline(i, k-1, knots), x, deg-1) / (knots[i+k+1] - knots[i+1])
     end
-    if knots[i+k+1+1]-knots[i+1+1] != 0
-        second = k * derivative(BSpline(i+1, k-1, knots), x, deg-1) / (knots[i+k+1+1] - knots[i+1+1])
+    if !isapprox(abs(knots[i+k+1+1]-knots[i+1+1]) + 1, 1)
+        second = derivative(BSpline(i+1, k-1, knots), x, deg-1) / (knots[i+k+1+1] - knots[i+1+1])
     end
     return k * (first - second)
 end
