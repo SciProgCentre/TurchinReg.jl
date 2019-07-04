@@ -5,6 +5,17 @@ kernels:
 - Date: 2019-03-30
 =#
 
+"""
+```julia
+getOpticsKernels(name::String, alpha::Float64 = 1.)
+```
+
+`name` - name of a kernel,
+
+`alpha` - kernel function parameter.
+
+Returns function of 2 variables.
+"""
 function getOpticsKernels(name::String, alpha::Float64 = 1.)
     if name == "rectangular"
         return (x, y) -> rectangular(x-y, alpha)
@@ -21,7 +32,7 @@ function getOpticsKernels(name::String, alpha::Float64 = 1.)
     elseif name == "heaviside"
         return (x, y) -> heaviside(x-y, alpha)
     else
-        return Base.error("Unknown name of kernel")
+        return Base.error("Unknown name of a kernel")
     end
 end
 

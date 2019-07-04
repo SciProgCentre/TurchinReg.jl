@@ -5,16 +5,19 @@ make:
 - Date: 2019-06-30
 =#
 
-using Documenter, OhMyREPL
+include("../src/kernels.jl")
+include("../src/basis.jl")
+include("../src/gauss_error.jl")
+include("../src/vector.jl")
+
+using Documenter
 
 makedocs(
-    sitename = "Statreg",
+    sitename = "StatReg.jl",
     pages = Any[
-        "Home" => "myfirstdoc.md",
-        "Hello" => "myseconddoc.md",
+        "Home" => "introduction.md",
+        "Getting started" => "getting_started.md",
+        "User's Guide" => "users_guide.md",
+        "Examples" => "examples.md",
     ]
-)
-
-deploydocs(
-    repo = "github.com/KristofferC/OhMyREPL.jl.git",
 )

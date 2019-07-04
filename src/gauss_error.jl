@@ -3,6 +3,22 @@ include("vector.jl")
 
 using Optim
 
+"""
+```julia
+GaussErrorMatrixUnfolder(
+    omegas::Array{Array{Float64, 2} ,1},
+    method::String="EmpiricalBayes",
+    alphas::Union{Array{Float64, 1}, Nothing}=nothing,
+    )
+```
+`omegas` -- array of matrices that provide information about basis functions
+
+`method` -- constant selection method, possible options: "EmpiricalBayes" and "User"
+
+`alphas` -- array of constants, in case method="User" should be provided by user
+
+Solve model for dicsrete data.
+"""
 mutable struct GaussErrorMatrixUnfolder
     omegas::Array{Array{Float64, 2} ,1}
     n::Int64
@@ -55,6 +71,18 @@ mutable struct GaussErrorMatrixUnfolder
 end
 
 
+"""
+```julia
+solve(
+    unfolder::GaussErrorMatrixUnfolder,
+    kernel::Array{Float64, 2},
+    data::Array{Float64, 1},
+    data_errors::Union{Array{Float64, 1}, Array{Float64, 2}},
+    )
+```
+
+Returns dictionary with coefficients, errors and optimal constants.
+"""
 function solve(
     unfolder::GaussErrorMatrixUnfolder,
     kernel::Array{Float64, 2},
@@ -127,7 +155,7 @@ function solve_correct(
         a0 = zeros(Float64, Base.length(unfolder.omegas))
         println("starting optimize")
 
-        my_alphas = collect(range(-100, 3, length=500))
+        my_alphas = collect(range(-100, 0.5, length=500))
         alphas = [[exp(my_alpha)] for my_alpha in my_alphas]
         plot(exp.(my_alphas), -alpha_prob.(alphas))
 
@@ -160,6 +188,26 @@ function solve_correct(
     return Dict("coeff" => r, "sig" => iBaO, "alphas" => unfolder.alphas)
 end
 
+
+"""
+```julia
+GaussErrorUnfolder(
+    basis::Basis,
+    omegas::Array,
+    method::String="EmpiricalBayes",
+    alphas::Union{Array{Float64, 1}, Nothing}=nothing,
+    )
+```
+
+`basis` -- basis for reconstruction
+
+`omegas` -- array of matrices that provide information about basis functions
+
+`method` -- constant selection method, possible options: "EmpiricalBayes" and "User"
+
+`alphas` -- array of constants, in case method="User" should be provided by user
+
+"""
 mutable struct GaussErrorUnfolder
     basis::Basis
     solver::GaussErrorMatrixUnfolder
@@ -176,6 +224,20 @@ mutable struct GaussErrorUnfolder
     end
 end
 
+
+"""
+```julia
+solve(
+    gausserrorunfolder::GaussErrorUnfolder,
+    kernel::Union{Function, Array{Float64, 2}},
+    data::Union{Function, Array{Float64, 1}},
+    data_errors::Union{Function, Array{Float64, 1}},
+    y::Union{Array{Float64, 1}, Nothing},
+    )
+```
+
+Returns dictionary with coefficients, errors and optimal constants.
+"""
 function solve(
     gausserrorunfolder::GaussErrorUnfolder,
     kernel::Union{Function, Array{Float64, 2}},

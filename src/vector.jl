@@ -1,5 +1,13 @@
 include("basis.jl")
 
+
+"""
+```julia
+PhiVec(coeff::Array{Float64}, basis::Basis, sig::Array{Float64})
+```
+
+Constructs solution function by coefficients, basis and errors.
+"""
 struct PhiVec
     coeff::Array{Float64}
     basis::Basis
@@ -35,6 +43,12 @@ end
 Base.length(phivec::PhiVec) = Base.length(phivec.basis)
 
 
+"""
+```julia
+call(phivec::PhiVec, x::Float64)
+```
+Returns solution function value in given point `x`.
+"""
 function call(phivec::PhiVec, x::Float64)
     res = sum(z -> z[1] * z[2].f(x),
         zip(phivec.coeff, phivec.basis.basis_functions))

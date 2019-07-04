@@ -2,7 +2,14 @@ include("config.jl")
 include("b_spline_implementation.jl")
 using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
 
+"""
+```julia
+BaseFunction(f, support::Tuple{Float64,Float64})
+BaseFunction(f, a::Float64, b::Float64)
+```
 
+Class for function with its support.
+"""
 struct BaseFunction
     f
     support::Tuple{Float64, Float64}
@@ -10,20 +17,29 @@ struct BaseFunction
     BaseFunction(f, a::Float64, b::Float64) = new(f, (a, b))
 end
 
+"""
+Abstract type for all bases.
 
+"""
 abstract type Basis end
 
 
 Base.length(basis::Basis) = Base.length(basis.basis_functions)
 
+"""
+```julia
+    discretize_kernel(basis::Basis, kernel::Function, xs::Array{Float64, 1})
+```
+Returns matrix n*m, where `n` - number of basis function, `m` - number of knots.
 
+"""
 function discretize_kernel(basis::Basis, kernel::Function, xs::Array{Float64, 1})
     Kmn = zeros(Float64, Base.length(xs), Base.length(basis))
     for (m, x) in enumerate(xs)
         for (n, func) in enumerate(basis.basis_functions)
             a, b = func.support
             res = quadgk(y -> kernel(y, x) * func.f(y),
-                a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=100
+                a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK
                 )
             Kmn[m, n] = res[1]
         end
@@ -32,6 +48,24 @@ function discretize_kernel(basis::Basis, kernel::Function, xs::Array{Float64, 1}
 end
 
 
+"""
+```julia
+omega(basis::Basis, deg::Int64)
+```
+Returns matrix of the mean values of derivatives of order `deg`
+"""
+omega(basis::Basis, deg::Int64) = ()
+
+
+"""
+```julia
+FourierBasis(a::Float64, b::Float64, n::Int64)
+```
+`a`, `b` -- the beginning and the end of the segment
+
+`n` -- number of basis functions
+
+"""
 struct FourierBasis <: Basis
     a::Float64
     b::Float64
@@ -71,6 +105,18 @@ end
 end
 
 
+"""
+```julia
+CubicSplineBasis(
+    knots::Array{Float64},
+    boundary_condition::Union{Tuple{Union{String, Nothing}, Union{String, Nothing}}, Nothing, String}=nothing
+    )
+```
+`knots` -- knots of spline,
+
+`boundary_condition` -- boundary conditions of basis functions. If tuple, the first element affects left bound, the second element affects right bound.
+If string, both sides are affected. Possible options: `"dirichlet"`, `nothing`.
+"""
 struct CubicSplineBasis <: Basis
     a::Float64
     b::Float64
@@ -143,7 +189,7 @@ end
             # if a < b
                 omega[i, j] = quadgk(
                     x::Float64 -> derivative(basis.basis_functions[i].f, x, deg) * derivative(basis.basis_functions[j].f, x, deg),
-                        a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=100)[1]
+                        a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
                 if omega[i, j] == 0 && i == j
                     println("omega[i, j] = 0 !!!")
                     q = collect(range(a, b, length=500))
@@ -156,7 +202,14 @@ end
     return [omega]
 end
 
+"""
+```julia
+LegendreBasis(a::Float64, b::Float64, n::Int64)
+```
+`a`, `b` -- the beginning and the end of the segment
 
+`n` -- number of basis functions
+"""
 struct LegendreBasis <: Basis
     a::Float64
     b::Float64
@@ -195,7 +248,7 @@ end
             x::Float64 -> (2 / (b - a))^(2 * deg) *
             der_func_i(2 * (x - a) / (b - a) - 1) *
             der_func_j(2 * (x - a) / (b - a) - 1),
-            a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=100)[1]
+            a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
             omega[j, i] = omega[i, j]
         end
     end
@@ -204,6 +257,20 @@ end
 
 
 #TODO: не работает из-за вырождения омеги
+"""
+```julia
+BernsteinBasis(
+    a::Float64, b::Float64, n::Int64,
+    boundary_condition::Union{Tuple{Union{String, Nothing}, Union{String, Nothing}}, Nothing, String}=nothing
+    )
+```
+`a`, `b` -- the beginning and the end of the segment
+
+`n` -- number of basis functions
+
+`boundary_condition` -- boundary conditions of basis functions. If tuple, the first element affects left bound, the second element affects right bound.
+If string, both sides are affected. Possible options: `"dirichlet"`, `nothing`.
+"""
 struct BernsteinBasis <: Basis
     a::Float64
     b::Float64
@@ -303,7 +370,7 @@ end
         for j = i:n_true_value
             omega[i+1, j+1] = quadgk(
             x::Float64 -> derivative(i, n_true_value, deg, x) * derivative(j, n_true_value, deg, x),
-            a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=100)[1]
+            a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
             omega[j+1, i+1] = omega[i+1, j+1]
         end
     end
