@@ -4,6 +4,10 @@ include("vector.jl")
 using Optim
 
 """
+Model for dicsrete data and kernel.
+
+**Constructor**
+
 ```julia
 GaussErrorMatrixUnfolder(
     omegas::Array{Array{Float64, 2} ,1},
@@ -17,7 +21,12 @@ GaussErrorMatrixUnfolder(
 
 `alphas` -- array of constants, in case method="User" should be provided by user
 
-Solve model for dicsrete data.
+**Fields**
+
+* `omegas::Array{Array{Float64, 2} ,1}`
+* `n::Int64` -- size of square omega matrix
+* `method::String`
+* `alphas::Union{Array{Float64}, Nothing}`
 """
 mutable struct GaussErrorMatrixUnfolder
     omegas::Array{Array{Float64, 2} ,1}
@@ -50,19 +59,19 @@ mutable struct GaussErrorMatrixUnfolder
             end
             n1, m1 = size(omega)
             if m1 != m
-                Base.error("All omega matrixes must have equal dimensions")
+                Base.error("All omega matrices must have equal dimensions")
             end
             if m1 != n1
-                Base.error("Matrix Omega must be square")
+                Base.error("Omega must be square")
             end
         end
 
         if method == "User"
             if alphas == nothing
-                Base.error("alphas must be defined for method='User'")
+                Base.error("Alphas must be defined for method='User'")
             end
             if Base.length(alphas) != Base.length(omegas)
-                Base.error("Omegas and alphas must have equal size")
+                Base.error("Omegas and alphas must have equal lengths")
             end
         end
 
@@ -81,7 +90,13 @@ solve(
     )
 ```
 
-Returns dictionary with coefficients, errors and optimal constants.
+**Arguments**
+* `unfolder::GaussErrorMatrixUnfolder` -- model
+* `kernel::Array{Float64, 2}` -- discrete kernel
+* `data::Array{Float64, 1}` -- function values
+* `data_errors::Union{Array{Float64, 1}, Array{Float64, 2}}` -- function errors
+
+**Returns:** `Dict{String, Array{Float64, 1}}` with coefficients ("coeff"), errors ("sig") and optimal constants ("alphas").
 """
 function solve(
     unfolder::GaussErrorMatrixUnfolder,
@@ -190,6 +205,10 @@ end
 
 
 """
+Model for continuous kernel. Data can be either discrete or continuous.
+
+**Constructor**
+
 ```julia
 GaussErrorUnfolder(
     basis::Basis,
@@ -207,6 +226,10 @@ GaussErrorUnfolder(
 
 `alphas` -- array of constants, in case method="User" should be provided by user
 
+
+**Fields**
+* `basis::Basis`
+* `solver::GaussErrorMatrixUnfolder`
 """
 mutable struct GaussErrorUnfolder
     basis::Basis
@@ -236,7 +259,14 @@ solve(
     )
 ```
 
-Returns dictionary with coefficients, errors and optimal constants.
+**Arguments**
+* `gausserrorunfolder::GaussErrorUnfolder` -- model
+* `kernel::Union{Function, Array{Float64, 2}}` -- discrete or continuous kernel
+* `data::Union{Function, Array{Float64, 1}}` -- function values
+* `data_errors::Union{Function, Array{Float64, 1}}` -- function errors
+* `y::Union{Array{Float64, 1}, Nothing}` -- points to calculate function values and its errors (when data is given as a function)
+
+**Returns:** `Dict{String, Array{Float64, 1}}` with coefficients ("coeff"), errors ("sig") and optimal constants ("alphas").
 """
 function solve(
     gausserrorunfolder::GaussErrorUnfolder,

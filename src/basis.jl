@@ -3,12 +3,19 @@ include("b_spline_implementation.jl")
 using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
 
 """
+Type for function with its support.
+
+**Constructor**
+
 ```julia
 BaseFunction(f, support::Tuple{Float64,Float64})
 BaseFunction(f, a::Float64, b::Float64)
 ```
 
-Class for function with its support.
+**Fields**
+
+* `f` -- function (type depends on the basis)
+* `support::Tuple{Float64,Float64}` -- support of the function
 """
 struct BaseFunction
     f
@@ -19,7 +26,6 @@ end
 
 """
 Abstract type for all bases.
-
 """
 abstract type Basis end
 
@@ -28,10 +34,15 @@ Base.length(basis::Basis) = Base.length(basis.basis_functions)
 
 """
 ```julia
-    discretize_kernel(basis::Basis, kernel::Function, xs::Array{Float64, 1})
+discretize_kernel(basis::Basis, kernel::Function, xs::Array{Float64, 1})
 ```
-Returns matrix n*m, where `n` - number of basis function, `m` - number of knots.
+**Arguments**
 
+* `basis` -- basis
+* `kernel` -- ``K(x, y)``, kernel
+* `xs` -- array of data points
+
+**Returns:** discretized kernel `K::Array{Float64, 2}`, ``K_{mn} = \\left(\\int_a^b K(x, y) \\psi_m(x) dx \\right)(y_n)`` - matrix of size n``\\times``m, where `m` - number of basis functions, `n` - number of data points.
 """
 function discretize_kernel(basis::Basis, kernel::Function, xs::Array{Float64, 1})
     Kmn = zeros(Float64, Base.length(xs), Base.length(basis))
@@ -52,25 +63,41 @@ end
 ```julia
 omega(basis::Basis, deg::Int64)
 ```
-Returns matrix of the mean values of derivatives of order `deg`
+**Arguments**
+
+* `basis` - basis
+* `deg` - order of derivatives
+
+**Returns:** `Omega::Array{Float64, 2}`, ``\\Omega_{mn} = \\int_a^b \\frac{d^{deg} \\psi_m}{dx^{deg}} \\frac{d^{deg} \\psi_n}{dx^{deg}}`` - matrix of size n``\\times``n of the mean values of derivatives of order `deg`, where n - number of functions in basis.
 """
 omega(basis::Basis, deg::Int64) = ()
 
 
 """
+Fourier basis with length ``2n+1``: {``0.5``, ``\\sin(\\frac{\\pi (x - \\frac{a+b}{2})}{b-a})``, ``\\cos(\\frac{\\pi (x - \\frac{a+b}{2})}{b-a})``, ..., ``\\sin(\\frac{\\pi n (x - \\frac{a+b}{2})}{b-a})``, ``\\cos(\\frac{\\pi n (x - \\frac{a+b}{2})}{b-a})``}.
+
+**Constructor**
+
 ```julia
 FourierBasis(a::Float64, b::Float64, n::Int64)
 ```
+
 `a`, `b` -- the beginning and the end of the segment
 
 `n` -- number of basis functions
 
+**Fields**
+
+* `a::Float64` -- beginning of the support
+* `b::Float64` -- end of the support
+* `n::Int64` -- number of basis functions
+* `basis_functions::Array{BaseFunction, 1}` -- array of basis functions
 """
 struct FourierBasis <: Basis
     a::Float64
     b::Float64
     n::Int64
-    basis_functions::Array{BaseFunction}
+    basis_functions::Array{BaseFunction, 1}
 
     function basis_functions_fourier(n::Int64, a::Float64, b::Float64)
         l = (b - a) / 2.
@@ -106,22 +133,31 @@ end
 
 
 """
+Cubic spline basis - B-spline of the order 3 on given knots with length ``n-4``, where n -- length of knots array.
+
+**Constructor**
 ```julia
 CubicSplineBasis(
     knots::Array{Float64},
     boundary_condition::Union{Tuple{Union{String, Nothing}, Union{String, Nothing}}, Nothing, String}=nothing
     )
 ```
-`knots` -- knots of spline,
+`knots` -- knots of spline
 
-`boundary_condition` -- boundary conditions of basis functions. If tuple, the first element affects left bound, the second element affects right bound.
-If string, both sides are affected. Possible options: `"dirichlet"`, `nothing`.
+`boundary_condition` -- boundary conditions of basis functions. If tuple, the first element affects left bound, the second element affects right bound. If string, both sides are affected. Possible options: `"dirichlet"`, `nothing`
+
+**Fields**
+
+* `a::Float64` -- beginning of the support, matches the first element of the array `knots`
+* `b::Float64` -- end of the support, matches the last element of the array `knots`
+* `knots::Array{Float64, 1}` -- array of points on which the spline is built
+* `basis_functions::Array{BaseFunction, 1}` -- array of basis functions
 """
 struct CubicSplineBasis <: Basis
     a::Float64
     b::Float64
-    knots::Array{Float64}
-    basis_functions::Array
+    knots::Array{Float64, 1}
+    basis_functions::Array{BaseFunction, 1}
 
     function basis_functions_cubic_splines(
         a::Float64, b::Float64, knots::Array{Float64},
@@ -132,7 +168,6 @@ struct CubicSplineBasis <: Basis
             func = BSpline(i, k, knots)
             support = (a, b)
             push!(basis_functions, BaseFunction(func, support))
-#             println("b_spline: i=", i, " k=", k, " knots=", knots)
         end
 
         function apply_condition(
@@ -203,17 +238,27 @@ end
 end
 
 """
+Legendre polynomials basis with length ``n``.
+
+**Constructor**
+
 ```julia
 LegendreBasis(a::Float64, b::Float64, n::Int64)
 ```
-`a`, `b` -- the beginning and the end of the segment
+`a`, `b` -- the beginning and the end of the support
 
 `n` -- number of basis functions
+
+**Fields**
+
+* `a::Float64` -- beginning of the support
+* `b::Float64` -- end of the support
+* `basis_functions::Array{BaseFunction, 1}` -- array of basis functions
 """
 struct LegendreBasis <: Basis
     a::Float64
     b::Float64
-    basis_functions::Array
+    basis_functions::Array{BaseFunction, 1}
 
     function basis_functions_legendre(a::Float64, b::Float64, n::Int64)
         basis_functions = []
@@ -258,6 +303,10 @@ end
 
 #TODO: не работает из-за вырождения омеги
 """
+Bernstein polynomial basis.
+
+**Constructor**
+
 ```julia
 BernsteinBasis(
     a::Float64, b::Float64, n::Int64,
@@ -268,13 +317,19 @@ BernsteinBasis(
 
 `n` -- number of basis functions
 
-`boundary_condition` -- boundary conditions of basis functions. If tuple, the first element affects left bound, the second element affects right bound.
-If string, both sides are affected. Possible options: `"dirichlet"`, `nothing`.
+`boundary_condition` -- boundary conditions of basis functions. If tuple, the first element affects left bound, the second element affects right bound. If string, both sides are affected. Possible options: `"dirichlet"`, `nothing`.
+
+**Fields**
+
+* `a::Float64` -- beginning of the support
+* `b::Float64` -- end of the support
+* `basis_functions::Array{BaseFunction, 1}` -- array of basis functions
+* `boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}}` -- boundary conditions of basis functions. If tuple, the first element affects left bound, the second element affects right bound. If string, both sides are affected. Possible options: `"dirichlet"`, `nothing`.
 """
 struct BernsteinBasis <: Basis
     a::Float64
     b::Float64
-    basis_functions::Array
+    basis_functions::Array{BaseFunction, 1}
     boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}}
 
     @memoize function basis_functions_bernstein(

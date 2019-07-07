@@ -9,6 +9,7 @@ include("../src/kernels.jl")
 include("../src/basis.jl")
 include("../src/gauss_error.jl")
 include("../src/vector.jl")
+include("../src/config.jl")
 
 using Documenter
 

@@ -2,11 +2,18 @@ include("basis.jl")
 
 
 """
+Constructs solution function by coefficients, basis and errors.
+
+**Constructor**
+
 ```julia
 PhiVec(coeff::Array{Float64}, basis::Basis, sig::Array{Float64})
 ```
+**Fields**
 
-Constructs solution function by coefficients, basis and errors.
+* `coeff::Array{Float64}` -- coefficients of decomposition of a function in basis
+* `basis::Basis` -- basis
+* `sig::Union{Array{Float64}, Nothing}` -- coefficients of decomposition of a function errors in basis
 """
 struct PhiVec
     coeff::Array{Float64}
@@ -47,7 +54,12 @@ Base.length(phivec::PhiVec) = Base.length(phivec.basis)
 ```julia
 call(phivec::PhiVec, x::Float64)
 ```
-Returns solution function value in given point `x`.
+**Arguments**
+
+* `phivec::PhiVec` -- unfolded function
+* `x::Float64` -- point to calculate the value of the function
+
+**Returns:** solution function value in given point.
 """
 function call(phivec::PhiVec, x::Float64)
     res = sum(z -> z[1] * z[2].f(x),
@@ -56,6 +68,17 @@ function call(phivec::PhiVec, x::Float64)
 end
 
 
+"""
+```julia
+call(phivec::PhiVec, xs::Array{Float64, 1})
+```
+**Arguments**
+
+* `phivec::PhiVec` -- unfolded function
+* `xs::Array{Float64, 1}` -- points to calculate the value of the function
+
+**Returns:** solution function value in given points.
+"""
 function call(phivec::PhiVec, xs::Array{Float64, 1})
     res = collect(map(x -> call(phivec, x), xs))
     return res
@@ -66,7 +89,13 @@ end
 ```julia
 errors(phi::PhiVec, x::Float64)
 ```
-Returns error in given point `x`.
+
+**Arguments**
+
+* `phi::PhiVec` -- unfolded function
+* `x::Float64` -- point to calculate the error of the function
+
+**Returns:** solution function error in given point `x`.
 """
 function errors(phi::PhiVec, x::Float64)
     if phi.sig == nothing
@@ -81,7 +110,13 @@ end
 ```julia
 errors(phi::PhiVec, xs::Array{Float64})
 ```
-Returns error in given point set `xs`.
+
+**Arguments**
+
+* `phi::PhiVec` -- unfolded function
+* `xs::Array{Float64}` -- points to calculate the error of the function
+
+**Returns:** solution function error in given point `x`.
 """
 function errors(phi::PhiVec, xs::Array{Float64})
     return collect(map(x -> errors(phi, x), xs))

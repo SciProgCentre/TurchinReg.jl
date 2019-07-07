@@ -9,12 +9,13 @@ kernels:
 ```julia
 getOpticsKernels(name::String, alpha::Float64 = 1.)
 ```
+**Arguments**
 
-`name` - name of a kernel,
+* `name` - name of a kernel
 
-`alpha` - kernel function parameter.
+* `alpha` - kernel function parameter
 
-Returns function of 2 variables.
+**Returns:** kernel, function of 2 variables.
 """
 function getOpticsKernels(name::String, alpha::Float64 = 1.)
     if name == "rectangular"
