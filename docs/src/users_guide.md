@@ -2,7 +2,7 @@
 
 
 ## Kernel
-Kernel can be specified as a matrix or as a function. 
+Kernel can be specified as a matrix or as a function.
 Initialize a kernel as a function:
 
 
@@ -15,13 +15,13 @@ Available kernels:
 ```math
 K(x, y) =
 \begin{cases}
-1, if |x-y|/\alpha < 1
+1, \text{if} |x-y|/\alpha < 1
 \\
-0, otherwise
+0, \text{otherwise}
 \end{cases}
 ```
 
-* `diffraction`: 
+* `diffraction`:
 ```math
 K(x, y) = \left(\frac{sin(\pi (x-y) /s_0)}{\pi (x-y) /s_0}\right)^2
 ```
@@ -31,36 +31,36 @@ s_0=\alpha/0.886
 
 * `gaussian`:
 ```math
-K(x, y) = \frac{2}{\alpha}\sqrt{\frac{ln2}{\pi}}e^{4ln2\left(\frac{x-y}{\alpha}\right)^2}
+K(x, y) = \frac{2}{\alpha}\sqrt{\frac{\ln2}{\pi}}e^{4\ln2\left(\frac{x-y}{\alpha}\right)^2}
 ```
 
 * `triangular`:
 ```math
 K(x, y) =
 \begin{cases}
-(1 - \frac{|x-y|}{\alpha})/\alpha, if |x-y|/\alpha < 1
+\left(1 - \frac{|x-y|}{\alpha}\right)/\alpha, \text{if} |x-y|/\alpha < 1
 \\
-0, otherwise
+0, \text{otherwise}
 \end{cases}
 ```
 
 * `dispersive`:
 ```math
-K(x, y) = \frac{\alpha}{2 \pi}((x-y)^2 + \left(\frac{\alpha}{2}\right)^2)
+K(x, y) = \frac{\alpha}{2 \pi}\left((x-y)^2 + \left(\frac{\alpha}{2}\right)^2\right)
 ```
 
 * `exponential`:
 ```math
-K(x, y) = \frac{ln2}{\alpha}e^{2ln2\frac{|x-y|}{\alpha}}
+K(x, y) = \frac{\ln2}{\alpha}e^{2\ln2\frac{|x-y|}{\alpha}}
 ```
 
 * `heaviside`:
 ```math
 K(x, y) =
 \begin{cases}
-1, if x>0
+1, \text{if} x>0
 \\
-0, otherwise
+0, \text{otherwise}
 \end{cases}
 ```
 
@@ -146,3 +146,18 @@ solve(
 ```
 ## Result
 
+```@docs
+PhiVec(coeff::Array{Float64}, basis::Basis, sig::Array{Float64})
+```
+
+```@docs
+call(phivec::PhiVec, x::Float64)
+```
+
+```@docs
+errors(phi::PhiVec, x::Float64)
+```
+
+```@docs
+errors(phi::PhiVec, xs::Array{Float64})
+```

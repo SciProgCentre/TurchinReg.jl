@@ -62,6 +62,12 @@ function call(phivec::PhiVec, xs::Array{Float64, 1})
 end
 
 
+"""
+```julia
+errors(phi::PhiVec, x::Float64)
+```
+Returns error in given point `x`.
+"""
 function errors(phi::PhiVec, x::Float64)
     if phi.sig == nothing
         Base.error("Unable to calculate errors without sigma matrix")
@@ -71,6 +77,12 @@ function errors(phi::PhiVec, x::Float64)
 end
 
 
+"""
+```julia
+errors(phi::PhiVec, xs::Array{Float64})
+```
+Returns error in given point set `xs`.
+"""
 function errors(phi::PhiVec, xs::Array{Float64})
     return collect(map(x -> errors(phi, x), xs))
 end
