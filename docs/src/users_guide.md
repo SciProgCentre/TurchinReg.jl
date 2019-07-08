@@ -78,7 +78,7 @@ BaseFunction
 ```
 
 ```@docs
-omega(basis::Basis, deg::Int64)
+omega(basis::Basis, order::Int64)
 ```
 
 ### Fourier basis

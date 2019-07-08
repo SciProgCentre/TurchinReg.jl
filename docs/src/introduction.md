@@ -22,7 +22,7 @@ Firstly, it is necessary to go from the continuous space of functions to the par
 ```math
 f_m = K_{mn} \varphi_n,
 ```
-where ``f_m = pr_{\psi_m(y)}(f(y))`` and ``\varphi_n = pr_{\psi_n(x)}(\varphi(x))`` are decompositions of a functions ``f(y)`` and ``\varphi(x)`` in basis functions, ``K_{mn} = \left(\int_a^b K(x, y) \psi_m(x) dx \right)(y_n)``.
+where ``f_m = f(y_m)``, ``\varphi_n``:  ``\varphi(x) = \sum_{k=1}^N \varphi_n \psi_k(x)``, ``K_{mn} = \int_a^b K(x, y_m) \psi_n(x) dx``.
 
 Let's introduce function ``\overrightarrow{S}`` that will evaluate ``\overrightarrow{\varphi}`` based on the function ``\overrightarrow{f}`` and loss function ``L(\overrightarrow{\widehat{\varphi}}, \overrightarrow{S}) = \sum_{n=1}^N \mu_n (\widehat{\varphi}_n - S_n)^2``, where ``\overrightarrow{\widehat{\varphi}}=\overrightarrow{\widehat{S}}(\overrightarrow{f})`` -- the best solution.
 
@@ -73,11 +73,11 @@ P(\overrightarrow{f}|\overrightarrow{\varphi})=\frac{1}{(2\pi)^{N/2}|\Sigma|^{1/
 ```
 Using the most probable ``\alpha``, one can get the best solution:
 ```math
-\overrightarrow{\widehat{S}} = (K^T \Sigma^{-1} K + alpha^* \Omega)^{-1} K^T \Sigma^{-1 T} \overrightarrow{f}
+\overrightarrow{\widehat{S}} = (K^T \Sigma^{-1} K + \alpha^* \Omega)^{-1} K^T \Sigma^{-1 T} \overrightarrow{f}
 ```
 
 ```math
-cov(\varphi_m, \varphi_n) = ||(K^T \Sigma^{-1} K + alpha^* \Omega)^{-1}||_{mn}
+cov(\varphi_m, \varphi_n) = ||(K^T \Sigma^{-1} K + \alpha^* \Omega)^{-1}||_{mn}
 ```
 
 

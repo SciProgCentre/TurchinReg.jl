@@ -34,19 +34,19 @@ Base.length(basis::Basis) = Base.length(basis.basis_functions)
 
 """
 ```julia
-discretize_kernel(basis::Basis, kernel::Function, xs::Array{Float64, 1})
+discretize_kernel(basis::Basis, kernel::Function, data_points::Array{Float64, 1})
 ```
 **Arguments**
 
 * `basis` -- basis
 * `kernel` -- ``K(x, y)``, kernel
-* `xs` -- array of data points
+* `data_points` -- array of data points
 
 **Returns:** discretized kernel `K::Array{Float64, 2}`, ``K_{mn} = \\left(\\int_a^b K(x, y) \\psi_m(x) dx \\right)(y_n)`` - matrix of size n``\\times``m, where `m` - number of basis functions, `n` - number of data points.
 """
-function discretize_kernel(basis::Basis, kernel::Function, xs::Array{Float64, 1})
-    Kmn = zeros(Float64, Base.length(xs), Base.length(basis))
-    for (m, x) in enumerate(xs)
+function discretize_kernel(basis::Basis, kernel::Function, data_points::Array{Float64, 1})
+    Kmn = zeros(Float64, Base.length(data_points), Base.length(basis))
+    for (m, x) in enumerate(data_points)
         for (n, func) in enumerate(basis.basis_functions)
             a, b = func.support
             res = quadgk(y -> kernel(y, x) * func.f(y),
@@ -61,16 +61,16 @@ end
 
 """
 ```julia
-omega(basis::Basis, deg::Int64)
+omega(basis::Basis, order::Int64)
 ```
 **Arguments**
 
 * `basis` - basis
-* `deg` - order of derivatives
+* `order` - order of derivatives
 
-**Returns:** `Omega::Array{Float64, 2}`, ``\\Omega_{mn} = \\int_a^b \\frac{d^{deg} \\psi_m}{dx^{deg}} \\frac{d^{deg} \\psi_n}{dx^{deg}}`` - matrix of size n``\\times``n of the mean values of derivatives of order `deg`, where n - number of functions in basis.
+**Returns:** `Omega::Array{Float64, 2}`, ``\\Omega_{mn} = \\int_a^b \\frac{d^{order} \\psi_m}{dx^{order}} \\frac{d^{order} \\psi_n}{dx^{order}}`` - matrix of size n``\\times``n of the mean values of derivatives of order `order`, where n - number of functions in basis.
 """
-omega(basis::Basis, deg::Int64) = ()
+omega(basis::Basis, order::Int64) = ()
 
 
 """
@@ -116,15 +116,15 @@ struct FourierBasis <: Basis
 end
 
 
-@memoize function omega(basis::FourierBasis, deg::Int64)
+@memoize function omega(basis::FourierBasis, order::Int64)
     a, b = basis.a, basis.b
     delta = (b - a) / 2
     temp = zeros(Float64, 2 * basis.n + 1)
-    if deg == 0
+    if order == 0
         temp[1] = delta
     end
     for i = 1:basis.n
-        val = ((i * pi) / delta) ^ (2 * deg) * delta / 2
+        val = ((i * pi) / delta) ^ (2 * order) * delta / 2
         temp[2 * i] = val
         temp[2 * i + 1] = val
     end
@@ -212,7 +212,7 @@ struct CubicSplineBasis <: Basis
 
 end
 
-@memoize function omega(basis::CubicSplineBasis, deg::Int64)
+@memoize function omega(basis::CubicSplineBasis, order::Int64)
     n = Base.length(basis)
     omega = zeros(Float64, n, n)
     for i = 1:n
@@ -223,12 +223,12 @@ end
             a, b = basis.a, basis.b
             # if a < b
                 omega[i, j] = quadgk(
-                    x::Float64 -> derivative(basis.basis_functions[i].f, x, deg) * derivative(basis.basis_functions[j].f, x, deg),
+                    x::Float64 -> derivative(basis.basis_functions[i].f, x, order) * derivative(basis.basis_functions[j].f, x, order),
                         a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
                 if omega[i, j] == 0 && i == j
                     println("omega[i, j] = 0 !!!")
                     q = collect(range(a, b, length=500))
-                    plot(q, [derivative(basis.basis_functions[i].f, x, deg) * derivative(basis.basis_functions[j].f, x, deg) for x in q])
+                    plot(q, [derivative(basis.basis_functions[i].f, x, order) * derivative(basis.basis_functions[j].f, x, order) for x in q])
                 end
                 omega[j, i] = omega[i, j]
             # end
@@ -236,6 +236,7 @@ end
     end
     return [omega]
 end
+
 
 """
 Legendre polynomials basis with length ``n``.
@@ -277,7 +278,7 @@ struct LegendreBasis <: Basis
 end
 
 
-@memoize function omega(basis::LegendreBasis, deg::Int64)
+@memoize function omega(basis::LegendreBasis, order::Int64)
     n = Base.length(basis)
     a = basis.a
     b = basis.b
@@ -287,10 +288,10 @@ end
         for j = i:n
             func_i = Fun(Legendre(), [zeros(i-1);1])
             func_j = Fun(Legendre(), [zeros(j-1);1])
-            der_func_i = D^deg * func_i
-            der_func_j = D^deg * func_j
+            der_func_i = D^order * func_i
+            der_func_j = D^order * func_j
             omega[i, j] = quadgk(
-            x::Float64 -> (2 / (b - a))^(2 * deg) *
+            x::Float64 -> (2 / (b - a))^(2 * order) *
             der_func_i(2 * (x - a) / (b - a) - 1) *
             der_func_j(2 * (x - a) / (b - a) - 1),
             a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
@@ -384,7 +385,8 @@ struct BernsteinBasis <: Basis
     end
 end
 
-@memoize function omega(basis::BernsteinBasis, deg::Int64)
+
+@memoize function omega(basis::BernsteinBasis, order::Int64)
     left_condition, right_condition = basis.boundary_condition
     n = Base.length(basis) - 1
     a = basis.a
@@ -424,7 +426,7 @@ end
     for i = 0:n_true_value
         for j = i:n_true_value
             omega[i+1, j+1] = quadgk(
-            x::Float64 -> derivative(i, n_true_value, deg, x) * derivative(j, n_true_value, deg, x),
+            x::Float64 -> derivative(i, n_true_value, order, x) * derivative(j, n_true_value, order, x),
             a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
             omega[j+1, i+1] = omega[i+1, j+1]
         end

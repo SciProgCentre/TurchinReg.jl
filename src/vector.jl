@@ -7,18 +7,21 @@ Constructs solution function by coefficients, basis and errors.
 **Constructor**
 
 ```julia
-PhiVec(coeff::Array{Float64}, basis::Basis, sig::Array{Float64})
+PhiVec(coeff::Array{Float64}, basis::Basis, errors::Array{Float64})
+PhiVec(coeff::Array{Float64}, basis::Basis)
+PhiVec(result::Dict{String, Array{Float64}}, basis::Basis)
 ```
+
 **Fields**
 
 * `coeff::Array{Float64}` -- coefficients of decomposition of a function in basis
 * `basis::Basis` -- basis
-* `sig::Union{Array{Float64}, Nothing}` -- coefficients of decomposition of a function errors in basis
+* `errors::Union{Array{Float64}, Nothing}` -- coefficients of decomposition of a function errors in basis
 """
 struct PhiVec
     coeff::Array{Float64}
     basis::Basis
-    sig::Union{Array{Float64}, Nothing}
+    errors::Union{Array{Float64}, Nothing}
 
     function PhiVec(coeff::Array{Float64}, basis::Basis)
         if Base.length(coeff) != Base.length(basis)
@@ -27,14 +30,14 @@ struct PhiVec
         return new(coeff, basis, nothing)
     end
 
-    function PhiVec(coeff::Array{Float64}, basis::Basis, sig::Array{Float64})
+    function PhiVec(coeff::Array{Float64}, basis::Basis, errors::Array{Float64})
         if Base.length(coeff) != Base.length(basis)
             Base.error("Phi and basis should have equal dimentions")
         end
-        if Base.length(size(sig)) != 2
+        if Base.length(size(errors)) != 2
             Base.error("Sigma matrix should be 2-dimentional")
         end
-        n, m = size(sig)
+        n, m = size(errors)
         if n != m
             Base.error("Sigma matrix should be square")
         end
@@ -42,7 +45,17 @@ struct PhiVec
             Base.error(
                 "If Phi is N-dimentional vector, sigma should be matrix NxN")
         end
-        return new(coeff, basis, sig)
+        return new(coeff, basis, errors)
+    end
+
+    function PhiVec(result::Dict{String, Array{Float64}}, basis::Basis)
+        if !haskey(result, "coeff")
+            Base.error("No 'coeff' in dictionary")
+        end
+        if !haskey(result, "errors")
+            return PhiVec(get(result, "coeff"), basis, nothing)
+        end
+        return PhiVec(get(result, "coeff"), basis, get(result, "errors"))
     end
 end
 
@@ -98,11 +111,11 @@ errors(phi::PhiVec, x::Float64)
 **Returns:** solution function error in given point `x`.
 """
 function errors(phi::PhiVec, x::Float64)
-    if phi.sig == nothing
+    if phi.errors == nothing
         Base.error("Unable to calculate errors without sigma matrix")
     end
     bfValue = [func.f(x) for func in phi.basis.basis_functions]
-    return (transpose(bfValue) * phi.sig * bfValue)^0.5
+    return (transpose(bfValue) * phi.errors * bfValue)^0.5
 end
 
 
