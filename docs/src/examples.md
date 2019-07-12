@@ -66,6 +66,11 @@ end
 Kmn = discretize_kernel(basis, kernel, y)
 ```
 
+* Model
+```julia
+
+```
+
 * Solve
 ```julia
 result = solve(model, Kmn, f, sig)
