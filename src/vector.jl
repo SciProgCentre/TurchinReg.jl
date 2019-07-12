@@ -48,14 +48,14 @@ struct PhiVec
         return new(coeff, basis, errors)
     end
 
-    function PhiVec(result::Dict{String, Array{Float64}}, basis::Basis)
+    function PhiVec(result::Dict, basis::Basis)
         if !haskey(result, "coeff")
             Base.error("No 'coeff' in dictionary")
         end
         if !haskey(result, "errors")
-            return PhiVec(get(result, "coeff"), basis, nothing)
+            return PhiVec(result["coeff"], basis)
         end
-        return PhiVec(get(result, "coeff"), basis, get(result, "errors"))
+        return PhiVec(result["coeff"], basis, result["errors"])
     end
 end
 
@@ -115,7 +115,7 @@ function errors(phi::PhiVec, x::Float64)
         Base.error("Unable to calculate errors without sigma matrix")
     end
     bfValue = [func.f(x) for func in phi.basis.basis_functions]
-    return (transpose(bfValue) * phi.errors * bfValue)^0.5
+    return (abs.(transpose(bfValue) * phi.errors * bfValue))^0.5
 end
 
 

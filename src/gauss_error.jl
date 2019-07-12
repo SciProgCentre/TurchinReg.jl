@@ -96,7 +96,7 @@ solve(
 * `data::Array{Float64, 1}` -- function values
 * `data_errors::Union{Array{Float64, 1}, Array{Float64, 2}}` -- function errors
 
-**Returns:** `Dict{String, Array{Float64, 1}}` with coefficients ("coeff"), errors ("sig") and optimal constants ("alphas").
+**Returns:** `Dict{String, Array{Float64, 1}}` with coefficients ("coeff"), errors ("errors") and optimal constants ("alphas").
 """
 function solve(
     unfolder::GaussErrorMatrixUnfolder,
@@ -142,7 +142,7 @@ function solve_correct(
     println("starting solve_correct")
     K = kernel
     Kt = transpose(kernel)
-    data_errorsInv = inv(data_errors)
+    data_errorsInv = pinv(data_errors)
     B = Kt * data_errorsInv * K
     b = Kt * transpose(data_errorsInv) * data
 
@@ -154,7 +154,7 @@ function solve_correct(
 #             if det(BaO) == 0
 #                 println("det(BaO) = 0")
 #             end
-            iBaO = inv(BaO)
+            iBaO = pinv(BaO)
             dotp = transpose(b) * iBaO * b
             if det(aO) != 0
                 detaO = log(abs(det(aO)))
@@ -197,10 +197,10 @@ function solve_correct(
     end
 
     BaO = B + transpose(unfolder.alphas)*unfolder.omegas
-    iBaO = inv(BaO)
+    iBaO = pinv(BaO)
     r = iBaO * b
     println("ending solve_correct")
-    return Dict("coeff" => r, "sig" => iBaO, "alphas" => unfolder.alphas)
+    return Dict("coeff" => r, "errors" => iBaO, "alphas" => unfolder.alphas)
 end
 
 
@@ -266,7 +266,7 @@ solve(
 * `data_errors::Union{Function, Array{Float64, 1}}` -- function errors
 * `y::Union{Array{Float64, 1}, Nothing}` -- points to calculate function values and its errors (when data is given as a function)
 
-**Returns:** `Dict{String, Array{Float64, 1}}` with coefficients ("coeff"), errors ("sig") and optimal constants ("alphas").
+**Returns:** `Dict{String, Array{Float64, 1}}` with coefficients ("coeff"), errors ("errors") and optimal constants ("alphas").
 """
 function solve(
     gausserrorunfolder::GaussErrorUnfolder,
