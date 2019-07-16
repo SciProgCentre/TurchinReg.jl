@@ -225,11 +225,11 @@ end
                 omega[i, j] = quadgk(
                     x::Float64 -> derivative(basis.basis_functions[i].f, x, order) * derivative(basis.basis_functions[j].f, x, order),
                         a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
-                if omega[i, j] == 0 && i == j
-                    println("omega[i, j] = 0 !!!")
-                    q = collect(range(a, b, length=500))
-                    plot(q, [derivative(basis.basis_functions[i].f, x, order) * derivative(basis.basis_functions[j].f, x, order) for x in q])
-                end
+                # if omega[i, j] == 0 && i == j
+                #     println("omega[i, j] = 0 !!!")
+                #     q = collect(range(a, b, length=500))
+                #     plot(q, [derivative(basis.basis_functions[i].f, x, order) * derivative(basis.basis_functions[j].f, x, order) for x in q])
+                # end
                 omega[j, i] = omega[i, j]
             # end
         end

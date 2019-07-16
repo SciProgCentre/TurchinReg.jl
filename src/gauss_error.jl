@@ -105,7 +105,7 @@ function solve(
     data_errors::Union{Array{Float64, 1}, Array{Float64, 2}},
     )
 
-    println("starting solve")
+    # println("starting solve")
     m, n = size(kernel)
     if n != unfolder.n
         Base.error("Kernel and unfolder must have equal dimentions.")
@@ -128,7 +128,7 @@ function solve(
     if size(data)[1] != size(data_errors)[1]
         Base.error("Sigma matrix and f must have equal dimensions.")
     end
-    println("ending solve")
+    # println("ending solve")
     return solve_correct(unfolder, kernel, data, data_errors)
 end
 
@@ -139,7 +139,7 @@ function solve_correct(
     data_errors::Array{Float64, 2},
     )
 
-    println("starting solve_correct")
+    # println("starting solve_correct")
     K = kernel
     Kt = transpose(kernel)
     data_errorsInv = pinv(data_errors)
@@ -147,7 +147,7 @@ function solve_correct(
     b = Kt * transpose(data_errorsInv) * data
 
     function optimal_alpha()
-        println("starting optimal_alpha")
+        # println("starting optimal_alpha")
         function alpha_prob(a::Array{Float64, 1})
             aO = transpose(a)*unfolder.omegas
             BaO = B + aO
@@ -168,11 +168,11 @@ function solve_correct(
         end
 
         a0 = zeros(Float64, Base.length(unfolder.omegas))
-        println("starting optimize")
+        # println("starting optimize")
 
-        my_alphas = collect(range(-100, 0.5, length=500))
-        alphas = [[exp(my_alpha)] for my_alpha in my_alphas]
-        plot(exp.(my_alphas), -alpha_prob.(alphas))
+        # my_alphas = collect(range(-100, 0.5, length=500))
+        # alphas = [[exp(my_alpha)] for my_alpha in my_alphas]
+        # plot(exp.(my_alphas), -alpha_prob.(alphas))
 
         res = optimize(
             a -> -alpha_prob(exp.(a)), a0,  BFGS(),
@@ -186,7 +186,7 @@ function solve_correct(
         end
         alpha = exp.(Optim.minimizer(res))
         if (alpha[1] - 0.) < 1e-6 || alpha[1] > 1e3
-            println("Incorrect alpha")
+            println("Incorrect alpha: too small or too big.")
             alpha = [0.05]
         end
         return alpha
@@ -199,7 +199,7 @@ function solve_correct(
     BaO = B + transpose(unfolder.alphas)*unfolder.omegas
     iBaO = pinv(BaO)
     r = iBaO * b
-    println("ending solve_correct")
+    # println("ending solve_correct")
     return Dict("coeff" => r, "errors" => iBaO, "alphas" => unfolder.alphas)
 end
 
@@ -276,7 +276,7 @@ function solve(
     y::Union{Array{Float64, 1}, Nothing},
     )
 
-    println("starting solve")
+    # println("starting solve")
     function check_y()
         if y == nothing
             Base.error("For callable arguments `y` must be defined")
@@ -303,7 +303,7 @@ function solve(
     else
         data_errors_array = data_errors
     end
-    println("ending solve")
+    # println("ending solve")
     result = solve(
         gausserrorunfolder.solver,
         kernel_array, data_array, data_errors_array
