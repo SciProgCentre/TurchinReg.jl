@@ -14,5 +14,4 @@ module StatReg
     export GaussErrorMatrixUnfolder, solve, GaussErrorUnfolder
     export PhiVec, call, errors
     export RTOL_QUADGK, MAXEVALS_QUADGK, X_TOL_OPTIM, ORDER_QUADGK
-
 end
