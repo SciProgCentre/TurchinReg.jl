@@ -18,7 +18,7 @@ using Documenter
 makedocs(
     sitename = "StatReg.jl",
     format = Documenter.HTML(
-        prettyurls = !("local" in ARGS),
+        prettyurls = true,
         canonical = "https://mipt-npm.github.io/StatReg.jl/stable"
     ),
     pages = Any[
@@ -27,4 +27,9 @@ makedocs(
         "User's Guide" => "users_guide.md",
         "Examples" => "examples.md",
     ]
+)
+
+deploydocs(
+    repo = "github.com/mipt-npm/StatReg.jl.git",
+    forcepush = true
 )
