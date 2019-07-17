@@ -19,7 +19,7 @@ makedocs(
     sitename = "StatReg.jl",
     format = Documenter.HTML(
         prettyurls = !("local" in ARGS),
-        canonical = "https://bat.github.io/BAT.jl/stable/"
+        canonical = "https://mipt-npm.github.io/StatReg.jl/stable"
     ),
     pages = Any[
         "Home" => "index.md",
