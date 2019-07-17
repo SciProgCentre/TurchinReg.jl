@@ -1,4 +1,5 @@
 using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
+include("config.jl")
 
 struct BSpline
     i::Int64
@@ -7,8 +8,6 @@ struct BSpline
     func::Function
 
     function BSpline(i::Int64, k::Int64, knots::Array{Float64})
-
-        eps = 10^-9
 
         function b_spline_function(i::Int64, k::Int64, x::Float64, knots::Array{Float64})
             if  k == 0

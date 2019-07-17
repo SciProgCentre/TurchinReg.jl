@@ -1,4 +1,5 @@
 include("basis.jl")
+include("config.jl")
 
 
 """
@@ -25,23 +26,29 @@ struct PhiVec
 
     function PhiVec(coeff::Array{Float64}, basis::Basis)
         if Base.length(coeff) != Base.length(basis)
+            @error "Phi and basis should have equal dimentions"
             Base.error("Phi and basis should have equal dimentions")
         end
+        @info "Created PhiVec."
         return new(coeff, basis, nothing)
     end
 
     function PhiVec(coeff::Array{Float64}, basis::Basis, errors::Array{Float64})
         if Base.length(coeff) != Base.length(basis)
+            @error "Phi and basis should have equal dimentions"
             Base.error("Phi and basis should have equal dimentions")
         end
         if Base.length(size(errors)) != 2
+            @error "Sigma matrix should be 2-dimentional"
             Base.error("Sigma matrix should be 2-dimentional")
         end
         n, m = size(errors)
         if n != m
+            @error "Sigma matrix should be square"
             Base.error("Sigma matrix should be square")
         end
         if n != Base.length(coeff)
+            @error "If Phi is N-dimentional vector, sigma should be matrix NxN"
             Base.error(
                 "If Phi is N-dimentional vector, sigma should be matrix NxN")
         end
@@ -50,6 +57,7 @@ struct PhiVec
 
     function PhiVec(result::Dict, basis::Basis)
         if !haskey(result, "coeff")
+            @error "No 'coeff' in dictionary"
             Base.error("No 'coeff' in dictionary")
         end
         if !haskey(result, "errors")
@@ -94,6 +102,7 @@ call(phivec::PhiVec, xs::Array{Float64, 1})
 """
 function call(phivec::PhiVec, xs::Array{Float64, 1})
     res = collect(map(x -> call(phivec, x), xs))
+    @info "PhiVec called successfully"
     return res
 end
 
@@ -132,5 +141,7 @@ errors(phi::PhiVec, xs::Array{Float64})
 **Returns:** solution function error in given point `x`.
 """
 function errors(phi::PhiVec, xs::Array{Float64})
-    return collect(map(x -> errors(phi, x), xs))
+    res = collect(map(x -> errors(phi, x), xs))
+    @info "PhiVec called successfully"
+    return res
 end

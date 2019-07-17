@@ -1,5 +1,6 @@
 include("basis.jl")
 include("vector.jl")
+include("config.jl")
 
 using Optim
 
@@ -41,40 +42,48 @@ mutable struct GaussErrorMatrixUnfolder
         )
 
         if Base.length(omegas) == 0
+            @error "Regularization matrix Omega is absent"
             Base.error("Regularization matrix Omega is absent")
         end
 
         if Base.length(size(omegas[1])) != 2
+            @error "Matrix Omega must have two dimensions"
             Base.error("Matrix Omega must have two dimensions")
         end
 
         n, m = size(omegas[1])
         if n != m
+            @error "Matrix Omega must be square"
             Base.error("Matrix Omega must be square")
         end
 
         for omega in omegas
             if length(size(omega)) != 2
+                @error "Matrix Omega must have two dimensions"
                 Base.error("Matrix Omega must have two dimensions")
             end
             n1, m1 = size(omega)
             if m1 != m
+                @error "All omega matrices must have equal dimensions"
                 Base.error("All omega matrices must have equal dimensions")
             end
             if m1 != n1
+                @error "Omega must be square"
                 Base.error("Omega must be square")
             end
         end
 
         if method == "User"
             if alphas == nothing
+                @error "Alphas must be defined for method='User'"
                 Base.error("Alphas must be defined for method='User'")
             end
             if Base.length(alphas) != Base.length(omegas)
+                @error "Omegas and alphas must have equal lengths"
                 Base.error("Omegas and alphas must have equal lengths")
             end
         end
-
+        @info "GaussErrorMatrixUnfolder is created"
         return new(omegas, m, method, alphas)
     end
 end
@@ -105,30 +114,35 @@ function solve(
     data_errors::Union{Array{Float64, 1}, Array{Float64, 2}},
     )
 
-    # println("starting solve")
+    @info "Starting solve..."
     m, n = size(kernel)
     if n != unfolder.n
+        @error "Kernel and unfolder must have equal dimentions."
         Base.error("Kernel and unfolder must have equal dimentions.")
     end
 
     if size(data)[1] != m
+        @error "K and f must be (m,n) and (m,) dimensional."
         Base.error("K and f must be (m,n) and (m,) dimensional.")
     end
 
     if length(size(data_errors)) == 1
         data_errors = cat(data_errors...; dims=(1,2))
     elseif length(size(data_errors)) != 2
+        @error "Sigma matrix must be two-dimensional."
         Base.error("Sigma matrix must be two-dimensional.")
     end
 
     if size(data_errors)[1] != size(data_errors)[2]
+        @error "Sigma matrix must be square."
         Base.error("Sigma matrix must be square.")
     end
 
     if size(data)[1] != size(data_errors)[1]
+        @error "Sigma matrix and f must have equal dimensions."
         Base.error("Sigma matrix and f must have equal dimensions.")
     end
-    # println("ending solve")
+    @info "Ending solve..."
     return solve_correct(unfolder, kernel, data, data_errors)
 end
 
@@ -139,7 +153,7 @@ function solve_correct(
     data_errors::Array{Float64, 2},
     )
 
-    # println("starting solve_correct")
+    @info "Starting solve_correct..."
     K = kernel
     Kt = transpose(kernel)
     data_errorsInv = pinv(data_errors)
@@ -147,13 +161,13 @@ function solve_correct(
     b = Kt * transpose(data_errorsInv) * data
 
     function optimal_alpha()
-        # println("starting optimal_alpha")
+        @info "Starting optimal_alpha..."
         function alpha_prob(a::Array{Float64, 1})
             aO = transpose(a)*unfolder.omegas
             BaO = B + aO
-#             if det(BaO) == 0
-#                 println("det(BaO) = 0")
-#             end
+            if det(BaO) == 0
+                @warn "det(BaO) = 0"
+            end
             iBaO = pinv(BaO)
             dotp = transpose(b) * iBaO * b
             if det(aO) != 0
@@ -168,11 +182,7 @@ function solve_correct(
         end
 
         a0 = zeros(Float64, Base.length(unfolder.omegas))
-        # println("starting optimize")
-
-        # my_alphas = collect(range(-100, 0.5, length=500))
-        # alphas = [[exp(my_alpha)] for my_alpha in my_alphas]
-        # plot(exp.(my_alphas), -alpha_prob.(alphas))
+        @info "Starting optimization..."
 
         res = optimize(
             a -> -alpha_prob(exp.(a)), a0,  BFGS(),
@@ -180,15 +190,15 @@ function solve_correct(
             store_trace=true, allow_f_increases=true))
 
         if !Optim.converged(res)
-            # Base.error("Minimization did not succeed")
-            println("Minimization did not succeed")
+            @warn "Minimization did not succeed, return alpha = 0.05."
             return [0.05]
         end
         alpha = exp.(Optim.minimizer(res))
         if (alpha[1] - 0.) < 1e-6 || alpha[1] > 1e3
-            println("Incorrect alpha: too small or too big.")
+            @warn "Incorrect alpha: too small or too big, return alpha = 0.05."
             alpha = [0.05]
         end
+        @info "Optimized successfully."
         return alpha
     end
 
@@ -199,7 +209,7 @@ function solve_correct(
     BaO = B + transpose(unfolder.alphas)*unfolder.omegas
     iBaO = pinv(BaO)
     r = iBaO * b
-    # println("ending solve_correct")
+    @info "Ending solve_correct..."
     return Dict("coeff" => r, "errors" => iBaO, "alphas" => unfolder.alphas)
 end
 
@@ -243,6 +253,7 @@ mutable struct GaussErrorUnfolder
         )
 
         solver = GaussErrorMatrixUnfolder(omegas, method, alphas)
+        @info "GaussErrorUnfolder is created."
         return new(basis, solver)
     end
 end
@@ -276,9 +287,10 @@ function solve(
     y::Union{Array{Float64, 1}, Nothing},
     )
 
-    # println("starting solve")
+    @info "Starting solve..."
     function check_y()
         if y == nothing
+            @error "For callable arguments `y` must be defined"
             Base.error("For callable arguments `y` must be defined")
         end
     end
@@ -303,7 +315,7 @@ function solve(
     else
         data_errors_array = data_errors
     end
-    # println("ending solve")
+    @info "Ending solve..."
     result = solve(
         gausserrorunfolder.solver,
         kernel_array, data_array, data_errors_array

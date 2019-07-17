@@ -1,7 +1,7 @@
 include("gauss_error.jl")
 include("kernels.jl")
-inclide("basis.jl")
-inclide("vector.jl")
+include("basis.jl")
+include("vector.jl")
 include("config.jl")
 
 using Test

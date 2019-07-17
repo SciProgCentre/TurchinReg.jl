@@ -17,10 +17,7 @@ using Documenter
 
 makedocs(
     sitename = "StatReg.jl",
-    format = Documenter.HTML(
-        prettyurls = true,
-        canonical = "https://mipt-npm.github.io/StatReg.jl/stable"
-    ),
+    format = Documenter.HTML(prettyurls = true),
     pages = Any[
         "Home" => "index.md",
         "Getting started" => "getting_started.md",

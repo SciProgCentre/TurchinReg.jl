@@ -1,5 +1,6 @@
 include("gauss_error.jl")
 include("kernels.jl")
+include("config.jl")
 
 
 a = 0.

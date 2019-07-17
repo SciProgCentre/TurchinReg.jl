@@ -45,6 +45,7 @@ discretize_kernel(basis::Basis, kernel::Function, data_points::Array{Float64, 1}
 **Returns:** discretized kernel `K::Array{Float64, 2}`, ``K_{mn} = \\left(\\int_a^b K(x, y) \\psi_m(x) dx \\right)(y_n)`` - matrix of size n``\\times``m, where `m` - number of basis functions, `n` - number of data points.
 """
 function discretize_kernel(basis::Basis, kernel::Function, data_points::Array{Float64, 1})
+    @info "Starting discretize kernel..."
     Kmn = zeros(Float64, Base.length(data_points), Base.length(basis))
     for (m, x) in enumerate(data_points)
         for (n, func) in enumerate(basis.basis_functions)
@@ -55,6 +56,7 @@ function discretize_kernel(basis::Basis, kernel::Function, data_points::Array{Fl
             Kmn[m, n] = res[1]
         end
     end
+    @info "Kernel was discretized successfully."
     return Kmn
 end
 
@@ -110,13 +112,16 @@ struct FourierBasis <: Basis
         return func
     end
 
-    FourierBasis(a::Float64, b::Float64, n::Int64) = new(
-        a, b, n, basis_functions_fourier(n, a, b)
-        )
+    function FourierBasis(a::Float64, b::Float64, n::Int64)
+        basis_functions = basis_functions_fourier(n, a, b)
+        @info "Created Fourier basis with $n basis function."
+        return new(a, b, n, basis_functions)
+    end
 end
 
 
 @memoize function omega(basis::FourierBasis, order::Int64)
+    @info "Calculating omega matrix for Fourier basis derivatives of order $order..."
     a, b = basis.a, basis.b
     delta = (b - a) / 2
     temp = zeros(Float64, 2 * basis.n + 1)
@@ -128,6 +133,7 @@ end
         temp[2 * i] = val
         temp[2 * i + 1] = val
     end
+    @info "Omega caclulated successfully."
     return [cat(temp...; dims=(1,2))]
 end
 
@@ -185,6 +191,7 @@ struct CubicSplineBasis <: Basis
                     return basis_functions[1:end-1]
                 end
             end
+            @error "BernsteinPolynomial: Unknown boundary condition: " + condition
             Base.error(
             "BernsteinPolynomial: Unknown boundary condition: " + condition)
         end
@@ -202,38 +209,37 @@ struct CubicSplineBasis <: Basis
         knots = append!(append!([knots[1], knots[1], knots[1]], knots), [knots[end], knots[end], knots[end]])
 
         if typeof(boundary_condition) == String || typeof(boundary_condition) == Nothing
-            return new(knots[1], knots[length(knots)], knots,
-                basis_functions_cubic_splines(a, b, knots, (boundary_condition, boundary_condition)))
+            basis_functions = basis_functions_cubic_splines(a, b, knots, (boundary_condition, boundary_condition))
+            @info "Created Cubic spline basis."
+            return new(knots[1], knots[length(knots)], knots, basis_functions)
         else
-            return new(knots[1], knots[length(knots)], knots,
-                basis_functions_cubic_splines(a, b, knots, boundary_condition))
+            basis_functions = basis_functions_cubic_splines(a, b, knots, boundary_condition)
+            @info "Created Cubic spline basis."
+            return new(knots[1], knots[length(knots)], knots, basis_functions)
         end
     end
 
 end
 
 @memoize function omega(basis::CubicSplineBasis, order::Int64)
+    @info "Calculating omega matrix for Cubis spline basis derivatives of order $order..."
     n = Base.length(basis)
     omega = zeros(Float64, n, n)
     for i = 1:n
         for j = i:n
             a_i, b_i = basis.basis_functions[i].support
             a_j, b_j = basis.basis_functions[j].support
-            # a, b = max(a_i, a_j), min(b_i, b_j)
             a, b = basis.a, basis.b
-            # if a < b
-                omega[i, j] = quadgk(
-                    x::Float64 -> derivative(basis.basis_functions[i].f, x, order) * derivative(basis.basis_functions[j].f, x, order),
-                        a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
-                # if omega[i, j] == 0 && i == j
-                #     println("omega[i, j] = 0 !!!")
-                #     q = collect(range(a, b, length=500))
-                #     plot(q, [derivative(basis.basis_functions[i].f, x, order) * derivative(basis.basis_functions[j].f, x, order) for x in q])
-                # end
+            omega[i, j] = quadgk(
+                x::Float64 -> derivative(basis.basis_functions[i].f, x, order) * derivative(basis.basis_functions[j].f, x, order),
+                    a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
+                if omega[i, j] == 0 && i == j
+                    @warn "Integral of squared derivative is 0, something went wrong"
+                end
                 omega[j, i] = omega[i, j]
-            # end
         end
     end
+    @info "Omega caclulated successfully."
     return [omega]
 end
 
@@ -272,13 +278,16 @@ struct LegendreBasis <: Basis
         return basis_functions
     end
 
-    LegendreBasis(a::Float64, b::Float64, n::Int64) = new(
-        a, b, basis_functions_legendre(a, b, n)
-        )
+    function LegendreBasis(a::Float64, b::Float64, n::Int64)
+        basis_functions = basis_functions_legendre(a, b, n)
+        @info "Created Legendre polynomials basis with $(len(basis)) basis functions."
+        return new(a, b, basis_functions)
+    end
 end
 
 
 @memoize function omega(basis::LegendreBasis, order::Int64)
+    @info "Calculating omega matrix for Legendre polynomials basis derivatives of order $order..."
     n = Base.length(basis)
     a = basis.a
     b = basis.b
@@ -295,16 +304,19 @@ end
             der_func_i(2 * (x - a) / (b - a) - 1) *
             der_func_j(2 * (x - a) / (b - a) - 1),
             a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
+            if omega[i, j] == 0 && i == j
+                @warn "Integral of squared derivative is 0, something went wrong"
+            end
             omega[j, i] = omega[i, j]
         end
     end
+    @info "Omega caclulated successfully."
     return [omega]
 end
 
 
-#TODO: не работает из-за вырождения омеги
 """
-Bernstein polynomial basis.
+Bernstein polynomials basis.
 
 **Constructor**
 
@@ -350,7 +362,9 @@ struct BernsteinBasis <: Basis
         end
 
         function apply_condition(
-            condition::Union{String, Nothing}, side::String, basis_functions::Array
+            condition::Union{String, Nothing},
+            side::String,
+            basis_functions::Array
             )
 
             if condition == nothing
@@ -364,6 +378,7 @@ struct BernsteinBasis <: Basis
                     return basis_functions[1:end-1]
                 end
             end
+            @error "BernsteinPolynomial: Unknown boundary condition: " + condition
             Base.error(
             "BernsteinPolynomial: Unknown boundary condition: " + condition)
         end
@@ -375,18 +390,36 @@ struct BernsteinBasis <: Basis
         return basis_functions
     end
 
-    function BernsteinBasis(a::Float64, b::Float64, n::Int64,
-    boundary_condition::Union{Tuple{Union{String, Nothing}, Union{String, Nothing}}, Nothing, String}=nothing)
+    function BernsteinBasis(
+        a::Float64, b::Float64, n::Int64,
+        boundary_condition::Union{
+            Tuple{Union{String, Nothing}, Union{String, Nothing}},
+            Nothing,
+            String}=nothing
+            )
+
         if typeof(boundary_condition) == String || typeof(boundary_condition) == Nothing
-            return new(a, b, basis_functions_bernstein(a, b, n, (boundary_condition, boundary_condition)), (boundary_condition, boundary_condition))
+            basis_functions = basis_functions_bernstein(
+                a, b, n, (boundary_condition, boundary_condition)
+                )
+            @info "Created Bernstein polynomials basis."
+            return new(
+                a, b, basis_functions,
+                (boundary_condition, boundary_condition)
+                )
         else
-            return return new(a, b, basis_functions_bernstein(a, b, n, boundary_condition), boundary_condition)
+            basis_functions = basis_functions_bernstein(
+                a, b, n, boundary_condition
+                )
+            @info "Created Bernstein polynomials basis."
+            return new(a, b, basis_functions, boundary_condition)
         end
     end
 end
 
 
 @memoize function omega(basis::BernsteinBasis, order::Int64)
+    @info "Calculating omega matrix for Bernstein polynomials basis derivatives of order $order..."
     left_condition, right_condition = basis.boundary_condition
     n = Base.length(basis) - 1
     a = basis.a
@@ -428,6 +461,9 @@ end
             omega[i+1, j+1] = quadgk(
             x::Float64 -> derivative(i, n_true_value, order, x) * derivative(j, n_true_value, order, x),
             a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
+            if omega[i+1, j+1] == 0 && i == j
+                @warn "Integral of squared derivative is 0, something went wrong"
+            end
             omega[j+1, i+1] = omega[i+1, j+1]
         end
     end
@@ -439,6 +475,6 @@ end
     if right_condition == "dirichlet"
         omega = omega[1:end-1, 1:end-1]
     end
-
+    @info "Omega caclulated successfully."
     return [omega]
 end

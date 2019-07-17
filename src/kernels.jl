@@ -4,6 +4,7 @@ kernels:
 - Author: ta_nyan
 - Date: 2019-03-30
 =#
+include("config.jl")
 
 """
 ```julia
