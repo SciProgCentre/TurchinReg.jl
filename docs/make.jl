@@ -17,6 +17,10 @@ using Documenter
 
 makedocs(
     sitename = "StatReg.jl",
+    format = Documenter.HTML(
+        prettyurls = !("local" in ARGS),
+        canonical = "https://bat.github.io/BAT.jl/stable/"
+    ),
     pages = Any[
         "Home" => "index.md",
         "Getting started" => "getting_started.md",
