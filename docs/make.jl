@@ -16,7 +16,7 @@ using Documenter
 makedocs(
     sitename = "StatReg.jl",
     pages = Any[
-        "Home" => "introduction.md",
+        "Home" => "index.md",
         "Getting started" => "getting_started.md",
         "User's Guide" => "users_guide.md",
         "Examples" => "examples.md",
