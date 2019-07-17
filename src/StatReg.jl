@@ -5,6 +5,7 @@ main:
 - Date: 2019-07-03
 =#
 module StatReg
+
     include("basis.jl")
     include("gauss_error.jl")
     include("vector.jl")
