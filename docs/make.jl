@@ -5,13 +5,13 @@ make:
 - Date: 2019-06-30
 =#
 
-# include("../src/kernels.jl")
-# include("../src/basis.jl")
-# include("../src/gauss_error.jl")
-# include("../src/vector.jl")
-# include("../src/config.jl")
-include("../src/StatReg.jl")
-using StatReg
+include("../src/kernels.jl")
+include("../src/basis.jl")
+include("../src/gauss_error.jl")
+include("../src/vector.jl")
+include("../src/config.jl")
+# include("../src/StatReg.jl")
+# using StatReg
 
 using Documenter
 
