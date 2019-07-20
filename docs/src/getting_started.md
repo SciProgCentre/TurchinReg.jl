@@ -15,7 +15,7 @@ In the first case ``K(x, y)`` is matrix ``n \times m``, ``f(y)`` and ``\delta f(
 In the second case ``K(x, y)`` is function, ``f(y)`` and ``\delta f(y)`` can be either functions or vectors.
 If they are functions, knot vector ``y`` should be specified.
 
-* Define data and errors
+* Define data and errors (`y` is a list of measurement points, `f` is a list of function values at these points, `delta_f` is a list of error in these points)
 
 ```julia
 using StatReg
@@ -51,7 +51,7 @@ basis = CubicSplineBasis(y, ("dirichlet", "dirichlet"))
 
 * Model:
 
-To reconstruct the function we use matrix of the second derivatives as a prior information. Then we create solution model.
+To reconstruct the function we use matrix of the second derivatives as a prior information. Then we choose a solution model.
 
 ```julia
 omega = omega(basis, 2)
@@ -60,7 +60,7 @@ model = GaussErrorUnfolder(basis, omega)
 
 * Reconstruction:
 
-To reconstruct the function we use function ``solve()`` that returns dictionary containing coefficients of basis function in the sum ``\varphi(x) = \sum_{k=1}^N coeff_n \psi_n(x)``, their errors ``sig_n`` (``\delta \varphi =  \sum_{k=1}^N sig_n \psi_n(x)``) and optimal parameter of smoothness ``\alpha``.
+To reconstruct the function we use ``solve()`` that returns dictionary containing coefficients of basis function in the sum ``\varphi(x) = \sum_{k=1}^N coeff_n \psi_n(x)``, their errors ``sig_n`` (``\delta \varphi =  \sum_{k=1}^N sig_n \psi_n(x)``) and optimal parameter of smoothness ``\alpha``.
 
 ```julia
 phi_reconstruct = solve(model, kernel, f, delta_f, y)

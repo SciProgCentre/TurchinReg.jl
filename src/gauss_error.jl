@@ -166,7 +166,7 @@ function solve_correct(
             aO = transpose(a)*unfolder.omegas
             BaO = B + aO
             if det(BaO) == 0
-                @warn "det(BaO) = 0"
+                @warn "det(BaO) = 0" maxlog=1
             end
             iBaO = pinv(BaO)
             dotp = transpose(b) * iBaO * b

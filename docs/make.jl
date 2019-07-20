@@ -11,7 +11,7 @@ include("../src/gauss_error.jl")
 include("../src/vector.jl")
 include("../src/config.jl")
 # include("../src/StatReg.jl")
-# using StatReg
+# using ../srcStatReg
 
 using Documenter
 
