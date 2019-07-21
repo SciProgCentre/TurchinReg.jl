@@ -18,29 +18,43 @@ PhiVec(result::Dict{String, Array{Float64}}, basis::Basis)
 * `coeff::Array{Float64}` -- coefficients of decomposition of a function in basis
 * `basis::Basis` -- basis
 * `errors::Union{Array{Float64}, Nothing}` -- coefficients of decomposition of a function errors in basis
+* `phi_function(x::Float64)`::Function -- returns constructed function's value at given point
+* `error_function(x::Float64)`::Union{Function, Nothing} -- returns constructed function's error at given point,
+ if errors are specified, otherwise is `nothing`
 """
 struct PhiVec
-    coeff::Array{Float64}
+    coeff::Array{Float64, 1}
     basis::Basis
-    errors::Union{Array{Float64}, Nothing}
+    errors::Union{Array{Float64, 2}, Nothing}
+    phi_function::Function
+    error_function::Union{Function, Nothing}
 
-    function PhiVec(coeff::Array{Float64}, basis::Basis)
-        if Base.length(coeff) != Base.length(basis)
-            @error "Phi and basis should have equal dimentions"
-            Base.error("Phi and basis should have equal dimentions")
-        end
-        @info "Created PhiVec."
-        return new(coeff, basis, nothing)
+    function phi_function_(coeff::Array{Float64, 1}, basis::Basis)
+        return x::Float64 -> sum(z -> z[1] * z[2].f(x),
+        zip(coeff, basis.basis_functions))
     end
 
-    function PhiVec(coeff::Array{Float64}, basis::Basis, errors::Array{Float64})
+    function error_function_(errors::Array{Float64, 2}, basis::Basis)
+        function errors_(x::Float64)
+            bfValue = [func.f(x) for func in basis.basis_functions]
+            return (abs.(transpose(bfValue) * errors * bfValue))^0.5
+        end
+        return errors_
+    end
+
+    function PhiVec(coeff::Array{Float64, 1}, basis::Basis)
         if Base.length(coeff) != Base.length(basis)
             @error "Phi and basis should have equal dimentions"
             Base.error("Phi and basis should have equal dimentions")
         end
-        if Base.length(size(errors)) != 2
-            @error "Sigma matrix should be 2-dimentional"
-            Base.error("Sigma matrix should be 2-dimentional")
+        @info "PhiVec is created."
+        return new(coeff, basis, nothing, phi_function_(coeff, basis), nothing)
+    end
+
+    function PhiVec(coeff::Array{Float64, 1}, basis::Basis, errors::Array{Float64, 2})
+        if Base.length(coeff) != Base.length(basis)
+            @error "Phi and basis should have equal dimentions"
+            Base.error("Phi and basis should have equal dimentions")
         end
         n, m = size(errors)
         if n != m
@@ -52,7 +66,8 @@ struct PhiVec
             Base.error(
                 "If Phi is N-dimentional vector, sigma should be matrix NxN")
         end
-        return new(coeff, basis, errors)
+        @info "PhiVec is created."
+        return new(coeff, basis, errors, phi_function_(coeff, basis), error_function_(errors, basis))
     end
 
     function PhiVec(result::Dict, basis::Basis)
@@ -65,83 +80,5 @@ struct PhiVec
         end
         return PhiVec(result["coeff"], basis, result["errors"])
     end
-end
 
-
-Base.length(phivec::PhiVec) = Base.length(phivec.basis)
-
-
-"""
-```julia
-call(phivec::PhiVec, x::Float64)
-```
-**Arguments**
-
-* `phivec::PhiVec` -- unfolded function
-* `x::Float64` -- point to calculate the value of the function
-
-**Returns:** solution function value in given point.
-"""
-function call(phivec::PhiVec, x::Float64)
-    res = sum(z -> z[1] * z[2].f(x),
-        zip(phivec.coeff, phivec.basis.basis_functions))
-    return res
-end
-
-
-"""
-```julia
-call(phivec::PhiVec, xs::Array{Float64, 1})
-```
-**Arguments**
-
-* `phivec::PhiVec` -- unfolded function
-* `xs::Array{Float64, 1}` -- points to calculate the value of the function
-
-**Returns:** solution function value in given points.
-"""
-function call(phivec::PhiVec, xs::Array{Float64, 1})
-    res = collect(map(x -> call(phivec, x), xs))
-    @info "PhiVec called successfully"
-    return res
-end
-
-
-"""
-```julia
-errors(phi::PhiVec, x::Float64)
-```
-
-**Arguments**
-
-* `phi::PhiVec` -- unfolded function
-* `x::Float64` -- point to calculate the error of the function
-
-**Returns:** solution function error in given point `x`.
-"""
-function errors(phi::PhiVec, x::Float64)
-    if phi.errors == nothing
-        Base.error("Unable to calculate errors without sigma matrix")
-    end
-    bfValue = [func.f(x) for func in phi.basis.basis_functions]
-    return (abs.(transpose(bfValue) * phi.errors * bfValue))^0.5
-end
-
-
-"""
-```julia
-errors(phi::PhiVec, xs::Array{Float64})
-```
-
-**Arguments**
-
-* `phi::PhiVec` -- unfolded function
-* `xs::Array{Float64}` -- points to calculate the error of the function
-
-**Returns:** solution function error in given point `x`.
-"""
-function errors(phi::PhiVec, xs::Array{Float64})
-    res = collect(map(x -> errors(phi, x), xs))
-    @info "PhiVec called successfully"
-    return res
 end

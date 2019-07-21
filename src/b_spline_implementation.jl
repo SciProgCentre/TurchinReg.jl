@@ -8,6 +8,18 @@ struct BSpline
     func::Function
 
     function BSpline(i::Int64, k::Int64, knots::Array{Float64})
+        if i < 0
+            @error "BSline number should be positive."
+            Base.error("BSline number should be positive.")
+        end
+        if k <= 0
+            @error "BSline order should be positive."
+            Base.error("BSline order should be positive.")
+        end
+        # if i + k + 1 < length(knots)
+        #     @error "Not enough knots to build the spline."
+        #     Base.error("Not enough knots to build the spline.")
+        # end
 
         function b_spline_function(i::Int64, k::Int64, x::Float64, knots::Array{Float64})
             if  k == 0
@@ -37,6 +49,10 @@ end
 
 
 function derivative(b_spline::BSpline, x::Float64, deg::Int64)
+    if deg < 0
+        @error "Order of derivative should be positive."
+        Base.error("Order of derivative should be positive.")
+    end
     if deg == 0
         return b_spline.func(x)
     end

@@ -121,7 +121,7 @@ function solve(
         Base.error("Kernel and unfolder must have equal dimentions.")
     end
 
-    if size(data)[1] != m
+    if length(data) != m
         @error "K and f must be (m,n) and (m,) dimensional."
         Base.error("K and f must be (m,n) and (m,) dimensional.")
     end
@@ -138,7 +138,7 @@ function solve(
         Base.error("Sigma matrix must be square.")
     end
 
-    if size(data)[1] != size(data_errors)[1]
+    if length(data) != size(data_errors)[1]
         @error "Sigma matrix and f must have equal dimensions."
         Base.error("Sigma matrix and f must have equal dimensions.")
     end
@@ -160,8 +160,9 @@ function solve_correct(
     B = Kt * data_errorsInv * K
     b = Kt * transpose(data_errorsInv) * data
 
-    function optimal_alpha()
-        @info "Starting optimal_alpha..."
+    function find_optimal_alpha()
+        @info "Starting find_optimal_alpha..."
+
         function alpha_prob(a::Array{Float64, 1})
             aO = transpose(a)*unfolder.omegas
             BaO = B + aO
@@ -194,17 +195,21 @@ function solve_correct(
             return [0.05]
         end
         alpha = exp.(Optim.minimizer(res))
-        if (alpha[1] - 0.) < 1e-6 || alpha[1] > 1e3
+        if alpha[1] < 1e-6 || alpha[1] > 1e3
             @warn "Incorrect alpha: too small or too big, return alpha = 0.05."
-            alpha = [0.05]
+            return [0.05]
         end
         @info "Optimized successfully."
         return alpha
     end
 
     if unfolder.method == "EmpiricalBayes"
-        unfolder.alphas = optimal_alpha()
+        unfolder.alphas = find_optimal_alpha()
+    elseif unfolder.method != "User"
+        @error "Unknown method" + unfolder.method
+        Base.eror("Unknown method" + unfolder.method)
     end
+
 
     BaO = B + transpose(unfolder.alphas)*unfolder.omegas
     iBaO = pinv(BaO)

@@ -113,8 +113,16 @@ struct FourierBasis <: Basis
     end
 
     function FourierBasis(a::Float64, b::Float64, n::Int64)
+        if a >= b
+            @error "Incorrect specification of a segment: `a` should be less than `b`."
+            Base.error("Incorrect specification of a segment: `a` should be less than `b`.")
+        end
+        if n <= 0
+            @error "Number of basis functions should be positive."
+            Base.error("Number of basis functions should be positive.")
+        end
         basis_functions = basis_functions_fourier(n, a, b)
-        @info "Created Fourier basis with $n basis function."
+        @info "Fourier basis is created."
         return new(a, b, n, basis_functions)
     end
 end
@@ -122,6 +130,10 @@ end
 
 @memoize function omega(basis::FourierBasis, order::Int64)
     @info "Calculating omega matrix for Fourier basis derivatives of order $order..."
+    if order < 0
+        @error "Order of derivative should be positive."
+        Base.error("Order of derivative should be positive.")
+    end
     a, b = basis.a, basis.b
     delta = (b - a) / 2
     temp = zeros(Float64, 2 * basis.n + 1)
@@ -134,7 +146,7 @@ end
         temp[2 * i + 1] = val
     end
     @info "Omega caclulated successfully."
-    return [cat(temp...; dims=(1,2))]
+    return cat(temp...; dims=(1,2))
 end
 
 
@@ -191,9 +203,9 @@ struct CubicSplineBasis <: Basis
                     return basis_functions[1:end-1]
                 end
             end
-            @error "BernsteinPolynomial: Unknown boundary condition: " + condition
+            @error "CubicSplineBasis: Unknown boundary condition: " + condition
             Base.error(
-            "BernsteinPolynomial: Unknown boundary condition: " + condition)
+            "CubicSplineBasis: Unknown boundary condition: " + condition)
         end
 
         left_condition, right_condition = boundary_condition
@@ -203,19 +215,28 @@ struct CubicSplineBasis <: Basis
         return basis_functions
     end
 
-    function CubicSplineBasis(knots::Array{Float64},
+    function CubicSplineBasis(knots::Array{Float64, 1},
         boundary_condition::Union{Tuple{Union{String, Nothing}, Union{String, Nothing}}, Nothing, String}=nothing)
+
+        if sort(knots) != knots
+            @error "Array of knots should be sorted in ascending order"
+            Base.error("Array of knots should be sorted in ascending order")
+        end
+        if length(Set(knots)) != length(knots)
+            @error "There should not be two equal elements in the list of knots"
+            Base.error("There should not be two equal elements in the list of knots")
+        end
 
         knots = append!(append!([knots[1], knots[1], knots[1]], knots), [knots[end], knots[end], knots[end]])
 
         if typeof(boundary_condition) == String || typeof(boundary_condition) == Nothing
             basis_functions = basis_functions_cubic_splines(a, b, knots, (boundary_condition, boundary_condition))
-            @info "Created Cubic spline basis."
-            return new(knots[1], knots[length(knots)], knots, basis_functions)
+            @info "Cubic spline basis is created."
+            return new(knots[1], knots[end], knots, basis_functions)
         else
             basis_functions = basis_functions_cubic_splines(a, b, knots, boundary_condition)
-            @info "Created Cubic spline basis."
-            return new(knots[1], knots[length(knots)], knots, basis_functions)
+            @info "Cubic spline basis is created."
+            return new(knots[1], knots[end], knots, basis_functions)
         end
     end
 
@@ -223,13 +244,17 @@ end
 
 @memoize function omega(basis::CubicSplineBasis, order::Int64)
     @info "Calculating omega matrix for Cubis spline basis derivatives of order $order..."
+    if order < 0
+        @error "Order of derivative should be positive."
+        Base.error("Order of derivative should be positive.")
+    end
     n = Base.length(basis)
     omega = zeros(Float64, n, n)
     for i = 1:n
         for j = i:n
             a_i, b_i = basis.basis_functions[i].support
             a_j, b_j = basis.basis_functions[j].support
-            a, b = basis.a, basis.b
+            a, b = min(a_j, a_i), max(b_j, b_i)
             omega[i, j] = quadgk(
                 x::Float64 -> derivative(basis.basis_functions[i].f, x, order) * derivative(basis.basis_functions[j].f, x, order),
                     a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
@@ -240,7 +265,7 @@ end
         end
     end
     @info "Omega caclulated successfully."
-    return [omega]
+    return omega
 end
 
 
@@ -279,8 +304,16 @@ struct LegendreBasis <: Basis
     end
 
     function LegendreBasis(a::Float64, b::Float64, n::Int64)
+        if a >= b
+            @error "Incorrect specification of a segment: `a` should be less than `b`."
+            Base.error("Incorrect specification of a segment: `a` should be less than `b`.")
+        end
+        if n <= 0
+            @error "Number of basis functions should be positive."
+            Base.error("Number of basis functions should be positive.")
+        end
         basis_functions = basis_functions_legendre(a, b, n)
-        @info "Created Legendre polynomials basis with $(len(basis)) basis functions."
+        @info "Legendre polynomials basis is created."
         return new(a, b, basis_functions)
     end
 end
@@ -288,6 +321,10 @@ end
 
 @memoize function omega(basis::LegendreBasis, order::Int64)
     @info "Calculating omega matrix for Legendre polynomials basis derivatives of order $order..."
+    if order < 0
+        @error "Order of derivative should be positive."
+        Base.error("Order of derivative should be positive.")
+    end
     n = Base.length(basis)
     a = basis.a
     b = basis.b
@@ -311,7 +348,7 @@ end
         end
     end
     @info "Omega caclulated successfully."
-    return [omega]
+    return omega
 end
 
 
@@ -398,11 +435,20 @@ struct BernsteinBasis <: Basis
             String}=nothing
             )
 
+        if a >= b
+            @error "Incorrect specification of a segment: `a` should be less than `b`."
+            Base.error("Incorrect specification of a segment: `a` should be less than `b`.")
+        end
+        if n <= 0
+            @error "Number of basis functions should be positive."
+            Base.error("Number of basis functions should be positive.")
+        end
+
         if typeof(boundary_condition) == String || typeof(boundary_condition) == Nothing
             basis_functions = basis_functions_bernstein(
                 a, b, n, (boundary_condition, boundary_condition)
                 )
-            @info "Created Bernstein polynomials basis."
+            @info "Bernstein polynomials basis is created."
             return new(
                 a, b, basis_functions,
                 (boundary_condition, boundary_condition)
@@ -411,7 +457,7 @@ struct BernsteinBasis <: Basis
             basis_functions = basis_functions_bernstein(
                 a, b, n, boundary_condition
                 )
-            @info "Created Bernstein polynomials basis."
+            @info "Bernstein polynomials basis is created."
             return new(a, b, basis_functions, boundary_condition)
         end
     end
@@ -420,6 +466,10 @@ end
 
 @memoize function omega(basis::BernsteinBasis, order::Int64)
     @info "Calculating omega matrix for Bernstein polynomials basis derivatives of order $order..."
+    if order < 0
+        @error "Order of derivative should be positive."
+        Base.error("Order of derivative should be positive.")
+    end
     left_condition, right_condition = basis.boundary_condition
     n = Base.length(basis) - 1
     a = basis.a
@@ -476,5 +526,5 @@ end
         omega = omega[1:end-1, 1:end-1]
     end
     @info "Omega caclulated successfully."
-    return [omega]
+    return omega
 end

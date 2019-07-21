@@ -141,19 +141,3 @@ solve(
 ```@docs
 PhiVec
 ```
-
-```@docs
-call(phivec::PhiVec, x::Float64)
-```
-
-```@docs
-call(phivec::PhiVec, xs::Array{Float64, 1})
-```
-
-```@docs
-errors(phi::PhiVec, x::Float64)
-```
-
-```@docs
-errors(phi::PhiVec, xs::Array{Float64})
-```
