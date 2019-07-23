@@ -157,8 +157,24 @@ function solve_correct(
     K = kernel
     Kt = transpose(kernel)
     data_errorsInv = pinv(data_errors)
+    data_errorsInv = (transpose(data_errorsInv) + data_errorsInv) / 2.
     B = Kt * data_errorsInv * K
+    B = (transpose(B) + B) / 2.
     b = Kt * transpose(data_errorsInv) * data
+    @warn "B = $B"
+
+    # if B != Symmetric(B)
+    #     println("not symmetric!")
+    #     q = size(B)[1]
+    #     w = size(B)[2]
+    #     for i in range(1, stop=q)
+    #         for j in range(1, stop=w)
+    #             if B[i, j] != B[j, i]
+    #                 println(B[i, j],  B[j, i])
+    #             end
+    #         end
+    #     end
+    # end
 
     function find_optimal_alpha()
         @info "Starting find_optimal_alpha..."
@@ -166,41 +182,88 @@ function solve_correct(
         function alpha_prob(a::Array{Float64, 1})
             aO = transpose(a)*unfolder.omegas
             BaO = B + aO
-            if det(BaO) == 0
-                @warn "det(BaO) = 0" maxlog=1
+            if abs(det(BaO)) < 1e-6
+                @warn "a = $(a[1]), abs(det(BaO)) < 1e-6"
+                # return 1e15
             end
             iBaO = pinv(BaO)
+            iBaO = (transpose(iBaO) + iBaO) / 2.
+            # if iBaO != Symmetric(iBaO)
+            #     println("not symmetric!")
+            #     # q = size(iBaO)[1]
+            #     # w = size(iBaO)[2]
+            #     # for i in range(1, stop=q)
+            #     #     for j in range(1, stop=w)
+            #     #         if iBaO[i, j] != iBaO[j, i]
+            #     #             println(iBaO[i, j],  iBaO[j, i])
+            #     #         end
+            #     #     end
+            #     # end
+            # end
+            # print(iBaO)
             dotp = transpose(b) * iBaO * b
             if det(aO) != 0
-                detaO = log(abs(det(aO)))
+                detaO = logabsdet(aO)[2]
             else
                 eigvals_aO = sort(eigvals(aO))
                 rank_deficiency = size(aO)[1] - rank(aO)
                 detaO = sum(log.(abs.(eigvals_aO[(rank_deficiency+1):end])))
             end
-            detBaO = log(abs(det(BaO)))
-            return detaO - detBaO + dotp
+            if det(BaO) != 0
+                detBaO = logabsdet(BaO)[2]
+            else
+                eigvals_BaO = sort(eigvals(BaO))
+                rank_deficiency = size(BaO)[1] - rank(BaO)
+                detBaO = sum(log.(abs.(eigvals_BaO[(rank_deficiency+1):end])))
+            end
+            ans = detaO - detBaO + dotp
+            # if a[1] < 2. && a[1] > 1.8
+            #     @warn "ans = $detaO - $detBaO + $dotp" maxlog = 10
+            #     # @warn "BaO_good_right = $BaO" maxlog=1
+            # end
+            # if detaO - detBaO + dotp < -1e7
+            #     # @warn "ans = $detaO - $detBaO + $dotp" maxlog = 10
+            #     @warn "BaO = $BaO" maxlog=1
+            # end
+            ans = detaO - detBaO + dotp
+            # if ans > 10 || ans < -10
+            #     return 0.
+            # end
+            # if a[1] < 1.30 && a[1] > 1.20
+            #     return 0.
+            # end
+            # return detaO - detBaO + dotp
+            # return dotp
+            return maximum(iBaO)
         end
 
         a0 = zeros(Float64, Base.length(unfolder.omegas))
         @info "Starting optimization..."
 
-        res = optimize(
-            a -> -alpha_prob(exp.(a)), a0,  BFGS(),
-            Optim.Options(x_tol=X_TOL_OPTIM, show_trace=true,
-            store_trace=true, allow_f_increases=true))
+        s = collect(range(0.0001, stop=7, length=70 * 1000))
+        res1 = [-alpha_prob([s_]) for s_ in s ]
+        plot(s, res1)
 
-        if !Optim.converged(res)
-            @warn "Minimization did not succeed, return alpha = 0.05."
-            return [0.05]
-        end
-        alpha = exp.(Optim.minimizer(res))
-        if alpha[1] < 1e-6 || alpha[1] > 1e3
-            @warn "Incorrect alpha: too small or too big, return alpha = 0.05."
-            return [0.05]
-        end
-        @info "Optimized successfully."
-        return alpha
+        # res1 = [max(-20, min(5, -alpha_prob_clear(s_))) for s_ in s ]
+        # plot(s, res1)
+
+        # res = optimize(
+        #     a -> -alpha_prob(exp.(a)), a0,  BFGS(),
+        #     Optim.Options(x_tol=X_TOL_OPTIM, show_trace=true,
+        #     store_trace=true, allow_f_increases=true))
+        #
+        # if !Optim.converged(res)
+        #     @warn "Minimization did not succeed, alpha = $(exp.(Optim.minimizer(res))), return alpha = 0.05."
+        #     return [0.05]
+        # end
+        # alpha = exp.(Optim.minimizer(res))
+        # if alpha[1] < 1e-6 || alpha[1] > 1e3
+        #     @warn "Incorrect alpha: too small or too big, alpha = $(exp.(Optim.minimizer(res))), return alpha = 0.05."
+        #     return [0.05]
+        # end
+        # @info "Optimized successfully."
+        # return alpha
+        return [0.05]
     end
 
     if unfolder.method == "EmpiricalBayes"
@@ -213,6 +276,7 @@ function solve_correct(
 
     BaO = B + transpose(unfolder.alphas)*unfolder.omegas
     iBaO = pinv(BaO)
+    iBaO = (transpose(iBaO) + iBaO) / 2.
     r = iBaO * b
     @info "Ending solve_correct..."
     return Dict("coeff" => r, "errors" => iBaO, "alphas" => unfolder.alphas)

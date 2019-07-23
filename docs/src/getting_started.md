@@ -4,7 +4,7 @@
 To install StatReg.jl, start up Julia and type the following code-snipped into the REPL.
 ```julia
 import Pkg
-Pkg.add("StatReg.jl")
+Pkg.clone("https://github.com/mipt-npm/StatReg.jl.git")
 ```
 
 ## Usage
@@ -12,7 +12,7 @@ Pkg.add("StatReg.jl")
 To reconstruct function you need to load data (``f(y)``) and data errors (``\delta f(y)``) and define Kernel ``K(x, y)``.
 There are two possibilities: use vector & matrix form or continuous form.
 In the first case ``K(x, y)`` is matrix ``n \times m``, ``f(y)`` and ``\delta f(y)`` - n-dimensional vectors.
-In the second case ``K(x, y)`` is function, ``f(y)`` and ``\delta f(y)`` can be either functions or vectors.
+In the second case ``K(x, y)`` is a function, ``f(y)`` and ``\delta f(y)`` can be either functions or vectors.
 If they are functions, knot vector ``y`` should be specified.
 
 * Define data and errors (`y` is a list of measurement points, `f` is a list of function values at these points, `delta_f` is a list of error in these points)
@@ -20,6 +20,8 @@ If they are functions, knot vector ``y`` should be specified.
 ```julia
 using StatReg
 
+a = 0.
+b = 10.
 y = collect(range(a, stop=b, length=20))
 f = [-0.00906047, 0.0239243, 0.168545, 0.503525, 1.27398,
     2.08793, 2.78204, 2.5939, 1.90542, 1.13321,
@@ -32,7 +34,7 @@ delta_f = [0.00888777, -0.00480116, 0.0396684, -0.00968618, -0.0195524,
 
 ```
 
-* Then define kernel:
+* Then define the kernel:
 ```julia
 function kernel(x::Float64, y::Float64)
     if abs(x-y) <= 1
@@ -43,7 +45,7 @@ end
 ```
 * Basis:
 
-We use Cubic Spline Basis with knots in data points and zero boundary conditions on the both sides.
+We will use Cubic Spline Basis with knots in data points and zero boundary conditions on both sides.
 
 ```julia
 basis = CubicSplineBasis(y, ("dirichlet", "dirichlet"))
@@ -51,28 +53,28 @@ basis = CubicSplineBasis(y, ("dirichlet", "dirichlet"))
 
 * Model:
 
-To reconstruct the function we use matrix of the second derivatives as a prior information. Then we choose a solution model.
+To reconstruct the function, we use matrix of the second derivatives as a prior information. Then we choose a solution model. It requires basis and a set of matrices that contain prior information. We will use only smoothness information.
 
 ```julia
-omega = omega(basis, 2)
-model = GaussErrorUnfolder(basis, omega)
+Omega = omega(basis, 2)
+model = GaussErrorUnfolder(basis, [Omega])
 ```
 
 * Reconstruction:
 
-To reconstruct the function we use ``solve()`` that returns dictionary containing coefficients of basis function in the sum ``\varphi(x) = \sum_{k=1}^N coeff_n \psi_n(x)``, their errors ``sig_n`` (``\delta \varphi =  \sum_{k=1}^N sig_n \psi_n(x)``) and optimal parameter of smoothness ``\alpha``.
+To reconstruct the function we use ``solve()`` that returns dictionary containing coefficients of basis function in the sum ``\varphi(x) = \sum_{k=1}^N coeff_n \psi_n(x)``, their errors ``errors_n`` (``\delta \varphi =  \sum_{k=1}^N errors_n \psi_n(x)``) and optimal parameter of smoothness ``\alpha``.
 
 ```julia
-phi_reconstruct = solve(model, kernel, f, delta_f, y)
+result = solve(model, kernel, f, delta_f, y)
 ```
 * Results
 
 Presentation of results in a convenient way is possible with `PhiVec`:
 ```julia
-phivec = PhiVec(phi_reconstruct["coeff"], basis, phi_reconstruct["sig"])
+phivec = PhiVec(result, basis)
 
-phi_reconstructed = call(phivec, x)
-phi_reconstructed_errors = errors(phivec, x)
+phi_reconstructed = phivec.phi_function.(x)
+phi_reconstructed_errors = phivec.error_function.(x)
 
 plot(x, phi_reconstructed)
 fill_between(x, phi_reconstructed - phi_reconstructed_errors, phi_reconstructed + phi_reconstructed_errors, alpha=0.3)
