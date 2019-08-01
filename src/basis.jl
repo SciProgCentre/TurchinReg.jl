@@ -2,6 +2,9 @@ include("config.jl")
 include("b_spline_implementation.jl")
 using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
 
+# using PyCall
+# @pyimport scipy.interpolate as inp
+
 """
 Type for function with its support.
 
@@ -227,7 +230,7 @@ struct CubicSplineBasis <: Basis
             Base.error("There should not be two equal elements in the list of knots")
         end
 
-        knots = append!(append!([knots[1], knots[1], knots[1]], knots), [knots[end], knots[end], knots[end]])
+        knots = append!(append!([knots[1] for i = 1:4], knots[3:end-2]), [knots[end] for i = 1:4])
 
         if typeof(boundary_condition) == String || typeof(boundary_condition) == Nothing
             basis_functions = basis_functions_cubic_splines(a, b, knots, (boundary_condition, boundary_condition))
@@ -248,20 +251,14 @@ end
         @error "Order of derivative should be positive."
         Base.error("Order of derivative should be positive.")
     end
-    n = Base.length(basis)
+    n = length(basis)
     omega = zeros(Float64, n, n)
     for i = 1:n
         for j = i:n
-            a_i, b_i = basis.basis_functions[i].support
-            a_j, b_j = basis.basis_functions[j].support
-            a, b = min(a_j, a_i), max(b_j, b_i)
             omega[i, j] = quadgk(
                 x::Float64 -> derivative(basis.basis_functions[i].f, x, order) * derivative(basis.basis_functions[j].f, x, order),
                     a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
-                if omega[i, j] == 0 && i == j
-                    @warn "Integral of squared derivative is 0, something went wrong"
-                end
-                omega[j, i] = omega[i, j]
+            omega[j, i] = omega[i, j]
         end
     end
     @info "Omega caclulated successfully."

@@ -1,39 +1,11 @@
+using Mamba
+
 include("basis.jl")
 include("vector.jl")
 include("config.jl")
 
-using Optim
 
-"""
-Model for dicsrete data and kernel.
-
-**Constructor**
-
-```julia
-GaussErrorMatrixUnfolder(
-    omegas::Array{Array{Float64, 2} ,1},
-    method::String="EmpiricalBayes",
-    alphas::Union{Array{Float64, 1}, Nothing}=nothing,
-    )
-```
-`omegas` -- array of matrices that provide information about basis functions
-
-`method` -- constant selection method, possible options: "EmpiricalBayes" and "User"
-
-`alphas` -- array of constants, in case method="User" should be provided by user
-
-**Fields**
-
-* `omegas::Array{Array{Float64, 2} ,1}`
-* `n::Int64` -- size of square omega matrix
-* `method::String`
-* `alphas::Union{Array{Float64}, Nothing}`
-* `low::Union{Array{Float64, 1}, Nothing}` -- lower limits for alphas
-* `high::Union{Array{Float64, 1}, Nothing}` -- higher limits for alphas
-* `alpha0::Union{Array{Float64, 1}, Nothing}`-- initial values for alphas
-"""
-
-mutable struct GaussErrorMatrixUnfolder
+mutable struct MCMC_matrix
     omegas::Array{Array{Float64, 2} ,1}
     n::Int64
     method::String
@@ -42,7 +14,7 @@ mutable struct GaussErrorMatrixUnfolder
     high::Union{Array{Float64, 1}, Nothing}
     alpha0::Union{Array{Float64, 1}, Nothing}
 
-    function GaussErrorMatrixUnfolder(
+    function MCMC_matrix(
         omegas::Array{Array{Float64, 2} ,1},
         method::String="EmpiricalBayes",
         alphas::Union{Array{Float64, 1}, Nothing}=nothing,
@@ -115,43 +87,25 @@ mutable struct GaussErrorMatrixUnfolder
                 Base.error("All elements in alpha0 should be positive")
             end
         end
-        @info "GaussErrorMatrixUnfolder is created"
+        @info "GaussErrorMatrixUnfolder is created."
         return new(omegas, m, method, alphas, low, high, alpha0)
     end
 end
 
 
-"""
-```julia
-solve(
-    unfolder::GaussErrorMatrixUnfolder,
-    kernel::Array{Float64, 2},
-    data::Array{Float64, 1},
-    data_errors::Union{Array{Float64, 1}, Array{Float64, 2}},
-    )
-```
-
-**Arguments**
-* `unfolder::GaussErrorMatrixUnfolder` -- model
-* `kernel::Array{Float64, 2}` -- discrete kernel
-* `data::Array{Float64, 1}` -- function values
-* `data_errors::Union{Array{Float64, 1}, Array{Float64, 2}}` -- function errors
-
-**Returns:** `Dict{String, Array{Float64, 1}}` with coefficients ("coeff"), errors ("errors") and optimal constants ("alphas").
-"""
 function solve(
-    unfolder::GaussErrorMatrixUnfolder,
+    unfolder::MCMC_matrix,
     kernel::Array{Float64, 2},
     data::Array{Float64, 1},
     data_errors::Union{Array{Float64, 1}, Array{Float64, 2}},
+    chains::Int64 = 1,
+    samples::Int64 = 10 * 1000
     )
 
     @info "Starting solve..."
     m, n = size(kernel)
     if n != unfolder.n
         @error "Kernel and unfolder must have equal dimentions."
-        println(unfolder.n)
-        println(size(kernel))
         Base.error("Kernel and unfolder must have equal dimentions.")
     end
 
@@ -177,14 +131,17 @@ function solve(
         Base.error("Sigma matrix and f must have equal dimensions.")
     end
     @info "Ending solve..."
-    return solve_correct(unfolder, kernel, data, data_errors)
+    return solve_correct(unfolder, kernel, data, data_errors, chains, samples)
 end
 
+
 function solve_correct(
-    unfolder::GaussErrorMatrixUnfolder,
+    unfolder::MCMC_matrix,
     kernel::Array{Float64, 2},
     data::Array{Float64, 1},
     data_errors::Array{Float64, 2},
+    chains::Int64 = 1,
+    samples::Int64 = 10 * 1000
     )
 
     @info "Starting solve_correct..."
@@ -219,14 +176,14 @@ function solve_correct(
             iBaO = (transpose(iBaO) + iBaO) / 2.
             dotp = transpose(b) * iBaO * b
             if det(aO) != 0
-                detaO = logabsdet(aO)[1]
+                detaO = logabsdet(aO)[2]
             else
                 eigvals_aO = sort(eigvals(aO))
                 rank_deficiency = size(aO)[1] - rank(aO)
                 detaO = sum(log.(abs.(eigvals_aO[(rank_deficiency+1):end])))
             end
             if det(BaO) != 0
-                detBaO = logabsdet(BaO)[1]
+                detBaO = logabsdet(BaO)[2]
             else
                 eigvals_BaO = sort(eigvals(BaO))
                 rank_deficiency = size(BaO)[1] - rank(BaO)
@@ -237,10 +194,19 @@ function solve_correct(
 
         @info "Starting optimization..."
 
-        s = collect(range(low[1], stop=high[1], length=1*1000))
-        res1 = [-alpha_prob([s_]) for s_ in s ]
-        # s_log = [log(s_) for s_ in s]
-        plot(s[2:end-1], res1[2:end-1])#, "o", markersize=1)
+        function my_alpha_prob(a::Array{Float64, 1})
+            delta = alpha_prob(a + [1e-5 for i in range(1, length(a))]) - alpha_prob(a)
+            if abs(delta/1e-5) > 1e3
+                return 0.
+            end
+            return alpha_prob(a)
+        end
+
+
+        # s = collect(range(low[1], stop=high[1], length=100*1000))
+        # res1 = [-alpha_prob([s_]) for s_ in s ]
+        # # s_log = [log(s_) for s_ in s]
+        # plot(s[2:end-1], res1[2:end-1])#, "o", markersize=1)
 
         a0 = log.(alpha0)
         res = optimize(
@@ -268,124 +234,107 @@ function solve_correct(
         Base.eror("Unknown method" + unfolder.method)
     end
 
-
-    BaO = B + transpose(unfolder.alphas)*unfolder.omegas
-    iBaO = pinv(BaO)
-    iBaO = (transpose(iBaO) + iBaO) / 2.
-    r = iBaO * b
-    @info "Ending solve_correct..."
-    return Dict("coeff" => r, "errors" => iBaO, "alphas" => unfolder.alphas)
+    return solve_MCMC(unfolder, kernel, data, data_errors, chains, samples)
 end
 
-
-"""
-Model for continuous kernel. Data can be either discrete or continuous.
-
-**Constructor**
-
-```julia
-GaussErrorUnfolder(
-    basis::Basis,
-    omegas::Array,
-    method::String="EmpiricalBayes",
-    alphas::Union{Array{Float64, 1}, Nothing}=nothing,
+function solve_MCMC(
+    unfolder::MCMC_matrix,
+    kernel::Array{Float64, 2},
+    data::Array{Float64, 1},
+    data_errors::Array{Float64, 2},
+    chains::Int64 = 1,
+    samples::Int64 = 10 * 1000
     )
-```
 
-`basis` -- basis for reconstruction
+    sigma = pinv(unfolder.omegas[1])
+    sigma = (transpose(sigma) + sigma) / 2.
+    n = unfolder.n
+    m = length(data)
+    alpha = unfolder.alphas[1]
 
-`omegas` -- array of matrices that provide information about basis functions
-
-`method` -- constant selection method, possible options: "EmpiricalBayes" and "User"
-
-`alphas` -- array of constants, in case method="User" should be provided by user
-
-
-**Fields**
-* `basis::Basis`
-* `solver::GaussErrorMatrixUnfolder`
-"""
-mutable struct GaussErrorUnfolder
-    basis::Basis
-    solver::GaussErrorMatrixUnfolder
-
-    function GaussErrorUnfolder(
-        basis::Basis,
-        omegas::Array,
-        method::String="EmpiricalBayes",
-        alphas::Union{Array{Float64, 1}, Nothing}=nothing,
-        low::Union{Array{Float64, 1}, Nothing}=nothing,
-        high::Union{Array{Float64, 1}, Nothing}=nothing,
-        alpha0::Union{Array{Float64, 1}, Nothing}=nothing
+    model = Model(
+        phi = Stochastic(1, (n, sigma, alpha) ->  MvNormal(zeros(n), sigma/sqrt(alpha))),
+        mu = Logical(1, (kernel, phi) -> kernel * phi, false),
+        f = Stochastic(1, (mu, data_errors) ->  MvNormal(mu, data_errors), false),
         )
 
-        solver = GaussErrorMatrixUnfolder(omegas, method, alphas, low, high, alpha0)
-        @info "GaussErrorUnfolder is created."
-        return new(basis, solver)
-    end
+    scheme = [NUTS([:phi])]
+
+    line = Dict{Symbol, Any}(
+        :f => data,
+        :kernel => kernel,
+        :data_errors => data_errors,
+        :n => n,
+        :sigma => sigma,
+        :alpha => alpha
+        )
+
+    inits = [
+            Dict{Symbol, Any}(
+            :phi => rand(Normal(0, 1), n),
+            :f => data
+            ) for i in 1:chains
+            ]
+
+    setsamplers!(model, scheme)
+    return model, line, inits, samples, 250, 2, chains
 end
 
-
-"""
-```julia
-solve(
-    gausserrorunfolder::GaussErrorUnfolder,
-    kernel::Union{Function, Array{Float64, 2}},
-    data::Union{Function, Array{Float64, 1}},
-    data_errors::Union{Function, Array{Float64, 1}},
-    y::Union{Array{Float64, 1}, Nothing},
-    )
-```
-
-**Arguments**
-* `gausserrorunfolder::GaussErrorUnfolder` -- model
-* `kernel::Union{Function, Array{Float64, 2}}` -- discrete or continuous kernel
-* `data::Union{Function, Array{Float64, 1}}` -- function values
-* `data_errors::Union{Function, Array{Float64, 1}}` -- function errors
-* `y::Union{Array{Float64, 1}, Nothing}` -- points to calculate function values and its errors (when data is given as a function)
-
-**Returns:** `Dict{String, Array{Float64, 1}}` with coefficients ("coeff"), errors ("errors") and optimal constants ("alphas").
-"""
-function solve(
-    gausserrorunfolder::GaussErrorUnfolder,
-    kernel::Union{Function, Array{Float64, 2}},
-    data::Union{Function, Array{Float64, 1}},
-    data_errors::Union{Function, Array{Float64, 1}},
-    y::Union{Array{Float64, 1}, Nothing},
-    )
-
-    @info "Starting solve..."
-    function check_y()
-        if y == nothing
-            @error "For callable arguments `y` must be defined"
-            Base.error("For callable arguments `y` must be defined")
-        end
+function get_values(sim::ModelChains, chains::Int64, n::Int64)
+    res =  mean([sim.value[:, :, j] for j in range(1, stop=chains)])
+    ans = []
+    for i in range(1, stop=n)
+        append!(ans, mean(res[:, i]))
     end
-
-    if !(typeof(kernel) == Array{Float64, 2})
-        check_y()
-        kernel_array = discretize_kernel(gausserrorunfolder.basis, kernel, y)
-    else
-        kernel_array = kernel
-    end
-
-    if !(typeof(data) == Array{Float64, 1})
-        check_y()
-        data_array = data.(y)
-    else
-        data_array = data
-    end
-
-    if !(typeof(data_errors) == Array{Float64, 1})
-        check_y()
-        data_errors_array = data_errors.(y)
-    else
-        data_errors_array = data_errors
-    end
-    @info "Ending solve..."
-    result = solve(
-        gausserrorunfolder.solver,
-        kernel_array, data_array, data_errors_array
-    )
-    return result
+    return convert(Array{Float64}, ans)
 end
+
+    # function P_f_phi(
+    #     f::Array{Float64, 1},
+    #     phi::Array{Float64, 1},
+    #     kernel::Array{Float64, 2},
+    #     sigma::Array{Float64, 2}
+    #     )
+    #
+    #     m = length(f)
+    #     norm = 1 / ((2 * pi)^(m / 2) * (det(sigma))^(1 / 2))
+    #     P = exp(- 1 / 2 * transpose(f - K * phi) * pinv(sigma) * (f - K * phi))
+    #     return norm * P
+    # end
+    #
+    # function sigma2_n(S::Array{Float64, 1}, n::Int64)
+    #     return Integral_mcmc(
+    #         x::Array{Float64, 1} ->
+    #         (x[n] - S[n])^2 * P_f_phi(data, x, kernel, data_errors)
+    #         )
+    # end
+    #
+    # function P_phi_f(
+    #     f::Array{Float64, 1},
+    #     phi::Array{Float64, 1},
+    #     kernel::Array{Float64, 2},
+    #     sigma::Array{Float64, 2}
+    #     )
+    #
+    #     norm = Integral_mcmc(
+    #         x::Array{Float64, 1} ->
+    #         P_phi(x) * P_f_phi(f, x, kernel, sigma)
+    #         )
+    #     P = P_phi(phi) * P_f_phi(f, phi, kernel, sigma) / norm
+    #
+    #     return P
+    # end
+    #
+    # function P_phi(phi::Array{Float64, 1})
+    #
+    #     alpha = unfolder.alphas
+    #     omega = unfolder.omegas
+    #     num = alpha[i]^(rank(omega[i])) * abs(det(omega[i]))
+    #     den = (2. * pi)^(length())
+    #     pow = - 1 / 2 * transpose(phi) * alpha[i] * omega[i] * phi
+    #
+    #     return sqrt(num / den) * exp(- 1 / 2 * pow)
+    # end
+
+
+# end
