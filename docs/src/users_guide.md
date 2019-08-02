@@ -93,19 +93,21 @@ FourierBasis
 CubicSplineBasis
 ```
 
-### Legendre polynomial basis
+### Legendre polynomials basis
 
 ```@docs
 LegendreBasis
 ```
 
-### Bernstein polynomial basis
+### Bernstein polynomials basis
 
 ```@docs
 BernsteinBasis
 ```
 
-## Model
+## Gaussian noise distribution with alpha as argmax of posterior probability
+
+### Model
 
 ```@docs
 GaussErrorMatrixUnfolder
@@ -115,8 +117,7 @@ GaussErrorMatrixUnfolder
 GaussErrorUnfolder
 ```
 
-
-## Reconstruction
+### Reconstruction
 
 ```@docs
 solve(
@@ -136,7 +137,49 @@ solve(
     y::Union{Array{Float64, 1}, Nothing},
     )
 ```
+
+## Any othes noise distribution with alpha as argmax of posterior probability
+
+### Model
+
+```@docs
+MCMCMatrixUnfolder
+```
+
+```@docs
+MCMCUnfolder
+```
+
+### Reconstruction
+
+```@docs
+solve(
+    mcmcunfolder::MCMCUnfolder,
+    kernel::Union{Function, Array{Float64, 2}},
+    data::Union{Function, Array{Float64, 1}},
+    data_errors::Union{Function, Array{Float64, 1}},
+    y::Union{Array{Float64, 1}, Nothing}=nothing,
+    chains::Int64 = 1,
+    samples::Int64 = 10 * 1000
+    )
+```
+
+```@docs
+solve(
+    unfolder::MCMCMatrixUnfolder,
+    kernel::Array{Float64, 2},
+    data::Array{Float64, 1},
+    data_errors::Union{Array{Float64, 1}, Array{Float64, 2}},
+    chains::Int64 = 1,
+    samples::Int64 = 10 * 1000
+    )
+```
+
 ## Result
+
+```@docs
+get_values(sim::ModelChains, chains::Int64, n::Int64)
+```
 
 ```@docs
 PhiVec

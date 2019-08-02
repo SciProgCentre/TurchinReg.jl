@@ -10,6 +10,8 @@ include("../src/basis.jl")
 include("../src/gauss_error.jl")
 include("../src/vector.jl")
 include("../src/config.jl")
+include("../src/mcmc.jl")
+include("../src/check.jl")
 # include("../src/StatReg.jl")
 # using ../srcStatReg
 

@@ -1,8 +1,12 @@
 include("basis.jl")
 include("vector.jl")
 include("config.jl")
+include("check.jl")
 
 using Optim
+
+make_sym(A::Array{Float64, 2}) = (transpose(A) + A) / 2
+
 
 """
 Model for dicsrete data and kernel.
@@ -22,17 +26,22 @@ GaussErrorMatrixUnfolder(
 
 `alphas` -- array of constants, in case method="User" should be provided by user
 
+`low` -- lower limits for alphas
+
+`high` -- higher limits for alphas
+
+`alpha0` -- unitial values for alphas
+
 **Fields**
 
 * `omegas::Array{Array{Float64, 2} ,1}`
 * `n::Int64` -- size of square omega matrix
 * `method::String`
 * `alphas::Union{Array{Float64}, Nothing}`
-* `low::Union{Array{Float64, 1}, Nothing}` -- lower limits for alphas
-* `high::Union{Array{Float64, 1}, Nothing}` -- higher limits for alphas
-* `alpha0::Union{Array{Float64, 1}, Nothing}`-- initial values for alphas
+* `low::Union{Array{Float64, 1}, Nothing}`
+* `high::Union{Array{Float64, 1}, Nothing}`
+* `alpha0::Union{Array{Float64, 1}, Nothing}`
 """
-
 mutable struct GaussErrorMatrixUnfolder
     omegas::Array{Array{Float64, 2} ,1}
     n::Int64
@@ -50,71 +59,7 @@ mutable struct GaussErrorMatrixUnfolder
         high::Union{Array{Float64, 1}, Nothing}=nothing,
         alpha0::Union{Array{Float64, 1}, Nothing}=nothing
         )
-
-        if Base.length(omegas) == 0
-            @error "Regularization matrix Omega is absent"
-            Base.error("Regularization matrix Omega is absent")
-        end
-
-        if Base.length(size(omegas[1])) != 2
-            @error "Matrix Omega must have two dimensions"
-            Base.error("Matrix Omega must have two dimensions")
-        end
-
-        n, m = size(omegas[1])
-        if n != m
-            @error "Matrix Omega must be square"
-            Base.error("Matrix Omega must be square")
-        end
-
-        for omega in omegas
-            if length(size(omega)) != 2
-                @error "Matrix Omega must have two dimensions"
-                Base.error("Matrix Omega must have two dimensions")
-            end
-            n1, m1 = size(omega)
-            if m1 != m
-                @error "All omega matrices must have equal dimensions"
-                Base.error("All omega matrices must have equal dimensions")
-            end
-            if m1 != n1
-                @error "Omega must be square"
-                Base.error("Omega must be square")
-            end
-        end
-
-        if method == "User"
-            if alphas == nothing
-                @error "Alphas must be defined for method='User'"
-                Base.error("Alphas must be defined for method='User'")
-            end
-            if Base.length(alphas) != Base.length(omegas)
-                @error "Omegas and alphas must have equal lengths"
-                Base.error("Omegas and alphas must have equal lengths")
-            end
-        end
-        if method == "EmpiricalBayes"
-            if low == nothing
-                @error "Lower limits of alphas should be provided for method=EmpiricalBayes"
-                Base.error("Lower limits of alphas should be provided for method=EmpiricalBayes")
-            end
-            if high == nothing
-                @error "Higher limits of alphas should be provided for method=EmpiricalBayes"
-                Base.error("Higher limits of alphas should be provided for method=EmpiricalBayes")
-            end
-            if alpha0 == nothing
-                @error "Initial values of alphas should be provided for method=EmpiricalBayes"
-                Base.error("Initial values of alphas should be provided for method=EmpiricalBayes")
-            end
-            if (length(low) != length(high)) || (length(low) != length(alpha0)) || (length(alpha0) != length(omegas))
-                @error "Low, high and alpha0 should have equal lengths"
-                Base.error("Low, high and alpha0 should have equal lengths")
-            end
-            if any(i -> (i <= 0), alpha0)
-                @error "All elements in alpha0 should be positive"
-                Base.error("All elements in alpha0 should be positive")
-            end
-        end
+        m = check_args(omegas, method, alphas, low, high, alpha0)
         @info "GaussErrorMatrixUnfolder is created"
         return new(omegas, m, method, alphas, low, high, alpha0)
     end
@@ -143,138 +88,28 @@ function solve(
     unfolder::GaussErrorMatrixUnfolder,
     kernel::Array{Float64, 2},
     data::Array{Float64, 1},
-    data_errors::Union{Array{Float64, 1}, Array{Float64, 2}},
+    data_errors::Union{Array{Float64, 1}, Array{Float64, 2}}
     )
-
     @info "Starting solve..."
-    m, n = size(kernel)
-    if n != unfolder.n
-        @error "Kernel and unfolder must have equal dimentions."
-        println(unfolder.n)
-        println(size(kernel))
-        Base.error("Kernel and unfolder must have equal dimentions.")
-    end
-
-    if length(data) != m
-        @error "K and f must be (m,n) and (m,) dimensional."
-        Base.error("K and f must be (m,n) and (m,) dimensional.")
-    end
-
-    if length(size(data_errors)) == 1
-        data_errors = cat(data_errors...; dims=(1,2))
-    elseif length(size(data_errors)) != 2
-        @error "Sigma matrix must be two-dimensional."
-        Base.error("Sigma matrix must be two-dimensional.")
-    end
-
-    if size(data_errors)[1] != size(data_errors)[2]
-        @error "Sigma matrix must be square."
-        Base.error("Sigma matrix must be square.")
-    end
-
-    if length(data) != size(data_errors)[1]
-        @error "Sigma matrix and f must have equal dimensions."
-        Base.error("Sigma matrix and f must have equal dimensions.")
-    end
-    @info "Ending solve..."
-    return solve_correct(unfolder, kernel, data, data_errors)
-end
-
-function solve_correct(
-    unfolder::GaussErrorMatrixUnfolder,
-    kernel::Array{Float64, 2},
-    data::Array{Float64, 1},
-    data_errors::Array{Float64, 2},
-    )
-
-    @info "Starting solve_correct..."
-    K = kernel
-    Kt = transpose(kernel)
-    data_errorsInv = pinv(data_errors)
-    data_errorsInv = (transpose(data_errorsInv) + data_errorsInv) / 2.
-    B = Kt * data_errorsInv * K
-    B = (transpose(B) + B) / 2.
-    b = Kt * transpose(data_errorsInv) * data
-    low = unfolder.low
-    high = unfolder.high
+    data_errors = check_args(unfolder, kernel, data, data_errors)
+    data_errorsInv = make_sym(pinv(data_errors))
+    B = make_sym(transpose(kernel) * data_errorsInv * kernel)
+    b = transpose(kernel) * transpose(data_errorsInv) * data
     alpha0 = unfolder.alpha0
-
-    function find_optimal_alpha()
-        @info "Starting find_optimal_alpha..."
-
-        function alpha_prob(a::Array{Float64, 1})
-
-            for i in range(1, stop=length(a))
-                if (a[i] <= low[i]) || (a[i] >= high[i])
-                    return -1e4
-                end
-            end
-
-            aO = transpose(a)*unfolder.omegas
-            BaO = B + aO
-            if abs(det(BaO)) < 1e-6
-                @warn "a = $(a[1]), abs(det(BaO)) < 1e-6" maxlog=10
-            end
-            iBaO = pinv(BaO)
-            iBaO = (transpose(iBaO) + iBaO) / 2.
-            dotp = transpose(b) * iBaO * b
-            if det(aO) != 0
-                detaO = logabsdet(aO)[1]
-            else
-                eigvals_aO = sort(eigvals(aO))
-                rank_deficiency = size(aO)[1] - rank(aO)
-                detaO = sum(log.(abs.(eigvals_aO[(rank_deficiency+1):end])))
-            end
-            if det(BaO) != 0
-                detBaO = logabsdet(BaO)[1]
-            else
-                eigvals_BaO = sort(eigvals(BaO))
-                rank_deficiency = size(BaO)[1] - rank(BaO)
-                detBaO = sum(log.(abs.(eigvals_BaO[(rank_deficiency+1):end])))
-            end
-            return detaO - detBaO + dotp
-        end
-
-        @info "Starting optimization..."
-
-        s = collect(range(low[1], stop=high[1], length=1*1000))
-        res1 = [-alpha_prob([s_]) for s_ in s ]
-        # s_log = [log(s_) for s_ in s]
-        plot(s[2:end-1], res1[2:end-1])#, "o", markersize=1)
-
-        a0 = log.(alpha0)
-        res = optimize(
-            a -> -alpha_prob(exp.(a)), a0,  BFGS(),
-            Optim.Options(x_tol=X_TOL_OPTIM, show_trace=true,
-            store_trace=true, allow_f_increases=true))
-
-        if !Optim.converged(res)
-            @warn "Minimization did not succeed, alpha = $(exp.(Optim.minimizer(res))), return alpha = 0.05."
-            return [0.05]
-        end
-        alpha = exp.(Optim.minimizer(res))
-        if alpha[1] > 1e3
-            @warn "Incorrect alpha: too small or too big, alpha = $(exp.(Optim.minimizer(res))), return alpha = 0.05."
-            return [0.05]
-        end
-        @info "Optimized successfully."
-        return alpha
-    end
-
     if unfolder.method == "EmpiricalBayes"
-        unfolder.alphas = find_optimal_alpha()
+        unfolder.alphas = find_optimal_alpha(
+            unfolder.omegas, B, b,
+            unfolder.alpha0, unfolder.low, unfolder.high
+            )
     elseif unfolder.method != "User"
         @error "Unknown method" + unfolder.method
         Base.eror("Unknown method" + unfolder.method)
     end
-
-
-    BaO = B + transpose(unfolder.alphas)*unfolder.omegas
-    iBaO = pinv(BaO)
-    iBaO = (transpose(iBaO) + iBaO) / 2.
-    r = iBaO * b
-    @info "Ending solve_correct..."
-    return Dict("coeff" => r, "errors" => iBaO, "alphas" => unfolder.alphas)
+    Ba0 = B + transpose(unfolder.alphas) * unfolder.omegas
+    iBa0 = make_sym(pinv(Ba0))
+    r = iBa0 * b
+    @info "Ending solve..."
+    return Dict("coeff" => r, "errors" => iBa0, "alphas" => unfolder.alphas)
 end
 
 
@@ -286,9 +121,12 @@ Model for continuous kernel. Data can be either discrete or continuous.
 ```julia
 GaussErrorUnfolder(
     basis::Basis,
-    omegas::Array,
+    omegas::Array{Array{Float64, 2}, 1},
     method::String="EmpiricalBayes",
     alphas::Union{Array{Float64, 1}, Nothing}=nothing,
+    low::Union{Array{Float64, 1}, Nothing}=nothing,
+    high::Union{Array{Float64, 1}, Nothing}=nothing,
+    alpha0::Union{Array{Float64, 1}, Nothing}=nothing
     )
 ```
 
@@ -300,6 +138,11 @@ GaussErrorUnfolder(
 
 `alphas` -- array of constants, in case method="User" should be provided by user
 
+`low` -- lower limits for alphas
+
+`high` -- higher limits for alphas
+
+`alpha0` -- unitial values for alphas
 
 **Fields**
 * `basis::Basis`
@@ -311,15 +154,16 @@ mutable struct GaussErrorUnfolder
 
     function GaussErrorUnfolder(
         basis::Basis,
-        omegas::Array,
+        omegas::Array{Array{Float64, 2}, 1},
         method::String="EmpiricalBayes",
         alphas::Union{Array{Float64, 1}, Nothing}=nothing,
         low::Union{Array{Float64, 1}, Nothing}=nothing,
         high::Union{Array{Float64, 1}, Nothing}=nothing,
         alpha0::Union{Array{Float64, 1}, Nothing}=nothing
         )
-
-        solver = GaussErrorMatrixUnfolder(omegas, method, alphas, low, high, alpha0)
+        solver = GaussErrorMatrixUnfolder(
+            omegas, method, alphas, low, high, alpha0
+        )
         @info "GaussErrorUnfolder is created."
         return new(basis, solver)
     end
@@ -333,7 +177,7 @@ solve(
     kernel::Union{Function, Array{Float64, 2}},
     data::Union{Function, Array{Float64, 1}},
     data_errors::Union{Function, Array{Float64, 1}},
-    y::Union{Array{Float64, 1}, Nothing},
+    y::Union{Array{Float64, 1}, Nothing}=nothing,
     )
 ```
 
@@ -351,41 +195,16 @@ function solve(
     kernel::Union{Function, Array{Float64, 2}},
     data::Union{Function, Array{Float64, 1}},
     data_errors::Union{Function, Array{Float64, 1}},
-    y::Union{Array{Float64, 1}, Nothing},
+    y::Union{Array{Float64, 1}, Nothing}=nothing,
     )
-
     @info "Starting solve..."
-    function check_y()
-        if y == nothing
-            @error "For callable arguments `y` must be defined"
-            Base.error("For callable arguments `y` must be defined")
-        end
-    end
-
-    if !(typeof(kernel) == Array{Float64, 2})
-        check_y()
-        kernel_array = discretize_kernel(gausserrorunfolder.basis, kernel, y)
-    else
-        kernel_array = kernel
-    end
-
-    if !(typeof(data) == Array{Float64, 1})
-        check_y()
-        data_array = data.(y)
-    else
-        data_array = data
-    end
-
-    if !(typeof(data_errors) == Array{Float64, 1})
-        check_y()
-        data_errors_array = data_errors.(y)
-    else
-        data_errors_array = data_errors
-    end
-    @info "Ending solve..."
+    kernel_array, data_array, data_errors_array = check_args(
+        gausserrorunfolder, kernel, data, data_errors, y
+        )
     result = solve(
         gausserrorunfolder.solver,
         kernel_array, data_array, data_errors_array
-    )
+        )
+    @info "Ending solve..."
     return result
 end

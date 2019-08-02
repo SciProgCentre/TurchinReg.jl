@@ -2,9 +2,6 @@ include("config.jl")
 include("b_spline_implementation.jl")
 using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
 
-# using PyCall
-# @pyimport scipy.interpolate as inp
-
 """
 Type for function with its support.
 
@@ -47,7 +44,10 @@ discretize_kernel(basis::Basis, kernel::Function, data_points::Array{Float64, 1}
 
 **Returns:** discretized kernel `K::Array{Float64, 2}`, ``K_{mn} = \\left(\\int_a^b K(x, y) \\psi_m(x) dx \\right)(y_n)`` - matrix of size n``\\times``m, where `m` - number of basis functions, `n` - number of data points.
 """
-function discretize_kernel(basis::Basis, kernel::Function, data_points::Array{Float64, 1})
+function discretize_kernel(
+    basis::Basis, kernel::Function, data_points::Array{Float64, 1}
+    )
+
     @info "Starting discretize kernel..."
     Kmn = zeros(Float64, Base.length(data_points), Base.length(basis))
     for (m, x) in enumerate(data_points)
@@ -109,8 +109,10 @@ struct FourierBasis <: Basis
         mid = (a + b) / 2.
         func = [BaseFunction(x::Float64 -> 0.5, a, b)]
         for i = 1:n
-            push!(func, BaseFunction(x::Float64 -> cos(i * pi * (x - mid) / l), a, b))
-            push!(func, BaseFunction(x::Float64 -> sin(i * pi * (x - mid) / l), a, b))
+            push!(func, BaseFunction(x::Float64 ->
+            cos(i * pi * (x - mid) / l), a, b))
+            push!(func, BaseFunction(x::Float64 ->
+            sin(i * pi * (x - mid) / l), a, b))
         end
         return func
     end
@@ -182,7 +184,9 @@ struct CubicSplineBasis <: Basis
 
     function basis_functions_cubic_splines(
         a::Float64, b::Float64, knots::Array{Float64},
-        boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}})
+        boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}}
+        )
+
         k = 3
         basis_functions = []
         for i = 0:(length(knots)-5)
@@ -192,7 +196,8 @@ struct CubicSplineBasis <: Basis
         end
 
         function apply_condition(
-            condition::Union{String, Nothing}, side::String, basis_functions::Array
+            condition::Union{String, Nothing}, side::String,
+            basis_functions::Array
             )
 
             if condition == nothing
@@ -212,8 +217,12 @@ struct CubicSplineBasis <: Basis
         end
 
         left_condition, right_condition = boundary_condition
-        basis_functions = apply_condition(left_condition, "left", basis_functions)
-        basis_functions = apply_condition(right_condition, "right", basis_functions)
+        basis_functions = apply_condition(
+            left_condition, "left", basis_functions
+            )
+        basis_functions = apply_condition(
+            right_condition, "right", basis_functions
+            )
 
         return basis_functions
     end
@@ -230,14 +239,22 @@ struct CubicSplineBasis <: Basis
             Base.error("There should not be two equal elements in the list of knots")
         end
 
-        knots = append!(append!([knots[1] for i = 1:4], knots[3:end-2]), [knots[end] for i = 1:4])
+        knots = [
+                [knots[1] for i = 1:4];
+                knots[3:end-2];
+                [knots[end] for i = 1:4]
+                ]
 
         if typeof(boundary_condition) == String || typeof(boundary_condition) == Nothing
-            basis_functions = basis_functions_cubic_splines(a, b, knots, (boundary_condition, boundary_condition))
+            basis_functions = basis_functions_cubic_splines(
+                a, b, knots, (boundary_condition, boundary_condition)
+                )
             @info "Cubic spline basis is created."
             return new(knots[1], knots[end], knots, basis_functions)
         else
-            basis_functions = basis_functions_cubic_splines(a, b, knots, boundary_condition)
+            basis_functions = basis_functions_cubic_splines(
+                a, b, knots, boundary_condition
+                )
             @info "Cubic spline basis is created."
             return new(knots[1], knots[end], knots, basis_functions)
         end
@@ -256,8 +273,12 @@ end
     for i = 1:n
         for j = i:n
             omega[i, j] = quadgk(
-                x::Float64 -> derivative(basis.basis_functions[i].f, x, order) * derivative(basis.basis_functions[j].f, x, order),
-                    a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
+                x::Float64 ->
+                derivative(basis.basis_functions[i].f, x, order) *
+                derivative(basis.basis_functions[j].f, x, order),
+                a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK,
+                order=ORDER_QUADGK
+                )[1]
             omega[j, i] = omega[i, j]
         end
     end
@@ -337,7 +358,9 @@ end
             x::Float64 -> (2 / (b - a))^(2 * order) *
             der_func_i(2 * (x - a) / (b - a) - 1) *
             der_func_j(2 * (x - a) / (b - a) - 1),
-            a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
+            a, b, rtol=RTOL_QUADGK,
+            maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK
+            )[1]
             if omega[i, j] == 0 && i == j
                 @warn "Integral of squared derivative is 0, something went wrong"
             end
@@ -418,8 +441,12 @@ struct BernsteinBasis <: Basis
         end
 
         left_condition, right_condition = boundary_condition
-        basis_functions = apply_condition(left_condition, "left", basis_functions)
-        basis_functions = apply_condition(right_condition, "right", basis_functions)
+        basis_functions = apply_condition(
+            left_condition, "left", basis_functions
+            )
+        basis_functions = apply_condition(
+            right_condition, "right", basis_functions
+            )
 
         return basis_functions
     end
@@ -485,8 +512,9 @@ end
     @memoize function derivative(k::Int64, n::Int64, l::Int64, x::Float64)
         coeff = [convert(Float64, binomial(BigInt(l),BigInt(j))) for j = 0:l]
         basis_functions = [basis_function_bernstein(k-j, n-l, x) for j = 0:l]
-        return convert(Float64, binomial(BigInt(n),BigInt(l)) * factorial(BigInt(l))) /
-            (b - a)^l * sum(coeff .* basis_functions)
+        return convert(
+            Float64, binomial(BigInt(n),BigInt(l)) * factorial(BigInt(l))
+            ) / (b - a)^l * sum(coeff .* basis_functions)
     end
 
     begin_function_number = 0
@@ -506,8 +534,11 @@ end
     for i = 0:n_true_value
         for j = i:n_true_value
             omega[i+1, j+1] = quadgk(
-            x::Float64 -> derivative(i, n_true_value, order, x) * derivative(j, n_true_value, order, x),
-            a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
+            x::Float64 ->
+            derivative(i, n_true_value, order, x) *
+            derivative(j, n_true_value, order, x),
+            a, b, rtol=RTOL_QUADGK,
+            maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
             if omega[i+1, j+1] == 0 && i == j
                 @warn "Integral of squared derivative is 0, something went wrong"
             end
