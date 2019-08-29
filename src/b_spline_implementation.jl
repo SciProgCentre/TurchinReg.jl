@@ -7,7 +7,7 @@ struct BSpline
     knots::Array{Float64}
     func::Function
 
-    function BSpline(i::Int64, k::Int64, knots::Array{Float64})
+    function BSpline(i::Int64, k::Int64, knots::Array{Float64, 1})
         if i < 0
             @error "BSline number should be positive."
             Base.error("BSline number should be positive.")
@@ -17,7 +17,7 @@ struct BSpline
             Base.error("BSline order should be positive.")
         end
 
-        function b_spline_function(i::Int64, k::Int64, x::Float64, knots::Array{Float64})
+        function b_spline_function(i::Int64, k::Int64, x::Float64, knots::Array{Float64, 1})
             if  k == 0
                 if x >= knots[i+1] && x < knots[i+2]
                     return 1.

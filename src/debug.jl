@@ -1,3 +1,3 @@
 using .StatReg
 
-println(MAXEVALS_QUADGK)
+println(config.MAXEVALS_QUADGK)

@@ -154,7 +154,7 @@ function find_optimal_alpha(
     a0 = log.(alpha0)
     res = optimize(
         a -> -alpha_prob(exp.(a)), a0,  BFGS(),
-        Optim.Options(x_tol=X_TOL_OPTIM, show_trace=true,
+        Optim.Options(x_tol=config.X_TOL_OPTIM, show_trace=true,
         store_trace=true, allow_f_increases=true))
     if !Optim.converged(res)
         @warn "Minimization did not succeed, alpha = $(exp.(Optim.minimizer(res))), return alpha = 0.05."

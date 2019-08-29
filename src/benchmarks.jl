@@ -24,7 +24,7 @@ function kernel(x::Float64, y::Float64)
     return getOpticsKernels("triangular")(x, y)
 end
 
-convolution = y -> quadgk(x -> kernel(x,y) * phi(x), a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
+convolution = y -> quadgk(x -> kernel(x,y) * phi(x), a, b, rtol=config.RTOL_QUADGK, maxevals=config.MAXEVALS_QUADGK, order=config.ORDER_QUADGK)[1]
 
 y = Float64[]
 for i = 0:50

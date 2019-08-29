@@ -14,5 +14,5 @@ module StatReg
     export BaseFunction, Basis, omega, FourierBasis, CubicSplineBasis, LegendreBasis, BernsteinBasis
     export GaussErrorMatrixUnfolder, solve, GaussErrorUnfolder
     export PhiVec, call, errors
-    export RTOL_QUADGK, MAXEVALS_QUADGK, X_TOL_OPTIM, ORDER_QUADGK
+    export config
 end

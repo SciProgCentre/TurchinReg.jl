@@ -179,7 +179,6 @@ function get_values(sim::ModelChains, chains::Int64, n::Int64)
     cov_ = cov(res)
     for i in range(1, stop=n)
         append!(coeff, mean(res[:, i]))
-        append!(errors, std(res[:, i]))
     end
     return Dict(
         "coeff" => convert(Array{Float64}, coeff),

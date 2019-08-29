@@ -54,7 +54,7 @@ function discretize_kernel(
         for (n, func) in enumerate(basis.basis_functions)
             a, b = func.support
             res = quadgk(y -> kernel(y, x) * func.f(y),
-                a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK
+                a, b, rtol=config.RTOL_QUADGK, maxevals=config.MAXEVALS_QUADGK, order=config.ORDER_QUADGK
                 )
             Kmn[m, n] = res[1]
         end
@@ -276,8 +276,8 @@ end
                 x::Float64 ->
                 derivative(basis.basis_functions[i].f, x, order) *
                 derivative(basis.basis_functions[j].f, x, order),
-                a, b, rtol=RTOL_QUADGK, maxevals=MAXEVALS_QUADGK,
-                order=ORDER_QUADGK
+                a, b, rtol=config.RTOL_QUADGK, maxevals=config.MAXEVALS_QUADGK,
+                order=config.ORDER_QUADGK
                 )[1]
             omega[j, i] = omega[i, j]
         end
@@ -358,8 +358,8 @@ end
             x::Float64 -> (2 / (b - a))^(2 * order) *
             der_func_i(2 * (x - a) / (b - a) - 1) *
             der_func_j(2 * (x - a) / (b - a) - 1),
-            a, b, rtol=RTOL_QUADGK,
-            maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK
+            a, b, rtol=config.RTOL_QUADGK,
+            maxevals=config.MAXEVALS_QUADGK, order=config.ORDER_QUADGK
             )[1]
             if omega[i, j] == 0 && i == j
                 @warn "Integral of squared derivative is 0, something went wrong"
@@ -537,8 +537,8 @@ end
             x::Float64 ->
             derivative(i, n_true_value, order, x) *
             derivative(j, n_true_value, order, x),
-            a, b, rtol=RTOL_QUADGK,
-            maxevals=MAXEVALS_QUADGK, order=ORDER_QUADGK)[1]
+            a, b, rtol=config.RTOL_QUADGK,
+            maxevals=config.MAXEVALS_QUADGK, order=config.ORDER_QUADGK)[1]
             if omega[i+1, j+1] == 0 && i == j
                 @warn "Integral of squared derivative is 0, something went wrong"
             end
