@@ -2,12 +2,12 @@ using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
 include("config.jl")
 
 struct BSpline
-    i::Int64
-    k::Int64
-    knots::Array{Float64}
+    i::Int
+    k::Int
+    knots::AbstractVector{<:Real}
     func::Function
 
-    function BSpline(i::Int64, k::Int64, knots::Array{Float64, 1})
+    function BSpline(i::Int, k::Int, knots::AbstractVector{<:Real})
         if i < 0
             @error "BSline number should be positive."
             Base.error("BSline number should be positive.")
@@ -17,7 +17,7 @@ struct BSpline
             Base.error("BSline order should be positive.")
         end
 
-        function b_spline_function(i::Int64, k::Int64, x::Float64, knots::Array{Float64, 1})
+        function b_spline_function(i::Int, k::Int, x::Real, knots::AbstractVector{<:Real})
             if  k == 0
                 if x >= knots[i+1] && x < knots[i+2]
                     return 1.
@@ -44,7 +44,7 @@ struct BSpline
 end
 
 
-function derivative(b_spline::BSpline, x::Float64, deg::Int64)
+function derivative(b_spline::BSpline, x::Real, deg::Int)
     if deg < 0
         @error "Order of derivative should be positive."
         Base.error("Order of derivative should be positive.")
@@ -69,4 +69,4 @@ function derivative(b_spline::BSpline, x::Float64, deg::Int64)
     return k * (first - second)
 end
 
-(b_spline::BSpline)(x::Float64) = b_spline.func(x)
+(b_spline::BSpline)(x::Real) = b_spline.func(x)

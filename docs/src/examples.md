@@ -8,7 +8,7 @@ include("src/kernels.jl")
 a = 0.
 b = 6.
 
-function phi(x::Float64)
+function phi(x::Real)
     mu1 = 2.
     mu2 = 4.
     n1 = 4.
@@ -30,7 +30,7 @@ myplot = plot(x, phi.(x))
 
 * Define kernel
 ```julia
-function kernel(x::Float64, y::Float64)
+function kernel(x::Real, y::Real)
     return getOpticsKernels("gaussian")(x, y)
 end
 ```

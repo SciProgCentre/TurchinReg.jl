@@ -64,7 +64,7 @@ K(x, y) =
 ```
 
 ```@docs
-discretize_kernel(basis::Basis, kernel::Function, xs::Array{Float64, 1})
+discretize_kernel(basis::Basis, kernel::Function, xs::Array{<:Real, 1})
 ```
 
 ## Basis
@@ -78,7 +78,7 @@ BaseFunction
 ```
 
 ```@docs
-omega(basis::Basis, order::Int64)
+omega(basis::Basis, order::Int)
 ```
 
 ### Fourier basis
@@ -122,19 +122,19 @@ GaussErrorUnfolder
 ```@docs
 solve(
     unfolder::GaussErrorMatrixUnfolder,
-    kernel::Array{Float64, 2},
-    data::Array{Float64, 1},
-    data_errors::Union{Array{Float64, 1}, Array{Float64, 2}},
+    kernel::Array{<:Real, 2},
+    data::Array{<:Real, 1},
+    data_errors::Union{Array{<:Real, 1}, Array{<:Real, 2}},
     )
 ```
 
 ```@docs
 solve(
     gausserrorunfolder::GaussErrorUnfolder,
-    kernel::Union{Function, Array{Float64, 2}},
-    data::Union{Function, Array{Float64, 1}},
-    data_errors::Union{Function, Array{Float64, 1}},
-    y::Union{Array{Float64, 1}, Nothing},
+    kernel::Union{Function, Array{<:Real, 2}},
+    data::Union{Function, Array{<:Real, 1}},
+    data_errors::Union{Function, Array{<:Real, 1}},
+    y::Union{Array{<:Real, 1}, Nothing},
     )
 ```
 
@@ -155,30 +155,30 @@ MCMCUnfolder
 ```@docs
 solve(
     mcmcunfolder::MCMCUnfolder,
-    kernel::Union{Function, Array{Float64, 2}},
-    data::Union{Function, Array{Float64, 1}},
-    data_errors::Union{Function, Array{Float64, 1}},
-    y::Union{Array{Float64, 1}, Nothing}=nothing,
-    chains::Int64 = 1,
-    samples::Int64 = 10 * 1000
+    kernel::Union{Function, Array{<:Real, 2}},
+    data::Union{Function, Array{<:Real, 1}},
+    data_errors::Union{Function, Array{<:Real, 1}},
+    y::Union{Array{<:Real, 1}, Nothing}=nothing,
+    chains::Int = 1,
+    samples::Int = 10 * 1000
     )
 ```
 
 ```@docs
 solve(
     unfolder::MCMCMatrixUnfolder,
-    kernel::Array{Float64, 2},
-    data::Array{Float64, 1},
-    data_errors::Union{Array{Float64, 1}, Array{Float64, 2}},
-    chains::Int64 = 1,
-    samples::Int64 = 10 * 1000
+    kernel::Array{<:Real, 2},
+    data::Array{<:Real, 1},
+    data_errors::Union{Array{<:Real, 1}, Array{<:Real, 2}},
+    chains::Int = 1,
+    samples::Int = 10 * 1000
     )
 ```
 
 ## Result
 
 ```@docs
-get_values(sim::ModelChains, chains::Int64, n::Int64)
+get_values(sim::ModelChains, chains::Int, n::Int)
 ```
 
 ```@docs

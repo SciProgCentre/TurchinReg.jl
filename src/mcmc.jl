@@ -14,12 +14,12 @@ MCMC model for dicsrete data and kernel.
 
 ```julia
 MCMCMatrixUnfolder(
-    omegas::Array{Array{Float64, 2} ,1},
+    omegas::Array{Array{T, 2}, 1} where T<:Real,
     method::String="EmpiricalBayes",
-    alphas::Union{Array{Float64, 1}, Nothing}=nothing,
-    low::Union{Array{Float64, 1}, Nothing}=nothing,
-    high::Union{Array{Float64, 1}, Nothing}=nothing,
-    alpha0::Union{Array{Float64, 1}, Nothing}=nothing
+    alphas::Union{AbstractVector{<:Real}, Nothing}=nothing,
+    low::Union{AbstractVector{<:Real}, Nothing}=nothing,
+    high::Union{AbstractVector{<:Real}, Nothing}=nothing,
+    alpha0::Union{AbstractVector{<:Real}, Nothing}=nothing
     )
 ```
 `omegas` -- array of matrices that provide information about basis functions
@@ -36,30 +36,30 @@ MCMCMatrixUnfolder(
 
 **Fields**
 
-* `omegas::Array{Array{Float64, 2} ,1}`
-* `n::Int64` -- size of square omega matrix
+* `omegas::Array{Array{T, 2}, 1} where T<:Real`
+* `n::Int` -- size of square omega matrix
 * `method::String`
-* `alphas::Union{Array{Float64}, Nothing}`
-* `low::Union{Array{Float64, 1}, Nothing}`
-* `high::Union{Array{Float64, 1}, Nothing}`
-* `alpha0::Union{Array{Float64, 1}, Nothing}`
+* `alphas::Union{AbstractVector{<:Real}, Nothing}`
+* `low::Union{AbstractVector{<:Real}, Nothing}`
+* `high::Union{AbstractVector{<:Real}, Nothing}`
+* `alpha0::Union{AbstractVector{<:Real}, Nothing}`
 """
 mutable struct MCMCMatrixUnfolder
-    omegas::Array{Array{Float64, 2} ,1}
-    n::Int64
+    omegas::Array{Array{T, 2}, 1} where T<:Real
+    n::Int
     method::String
-    alphas::Union{Array{Float64}, Nothing}
-    low::Union{Array{Float64, 1}, Nothing}
-    high::Union{Array{Float64, 1}, Nothing}
-    alpha0::Union{Array{Float64, 1}, Nothing}
+    alphas::Union{AbstractVector{<:Real}, Nothing}
+    low::Union{AbstractVector{<:Real}, Nothing}
+    high::Union{AbstractVector{<:Real}, Nothing}
+    alpha0::Union{AbstractVector{<:Real}, Nothing}
 
     function MCMCMatrixUnfolder(
-        omegas::Array{Array{Float64, 2} ,1},
+        omegas::Array{Array{T, 2}, 1} where T<:Real,
         method::String="EmpiricalBayes",
-        alphas::Union{Array{Float64, 1}, Nothing}=nothing,
-        low::Union{Array{Float64, 1}, Nothing}=nothing,
-        high::Union{Array{Float64, 1}, Nothing}=nothing,
-        alpha0::Union{Array{Float64, 1}, Nothing}=nothing
+        alphas::Union{AbstractVector{<:Real}, Nothing}=nothing,
+        low::Union{AbstractVector{<:Real}, Nothing}=nothing,
+        high::Union{AbstractVector{<:Real}, Nothing}=nothing,
+        alpha0::Union{AbstractVector{<:Real}, Nothing}=nothing
         )
         m = check_args(omegas, method, alphas, low, high, alpha0)
         @info "MCMCMatrixUnfolder is created."
@@ -74,31 +74,31 @@ MCMC solver for dicsrete data and kernel.
 ```julia
 solve(
     unfolder::MCMCMatrixUnfolder,
-    kernel::Array{Float64, 2},
-    data::Array{Float64, 1},
-    data_errors::Union{Array{Float64, 1}, Array{Float64, 2}},
-    chains::Int64 = 1,
-    samples::Int64 = 10 * 1000
+    kernel::AbstractMatrix{<:Real},
+    data::AbstractVector{<:Real},
+    data_errors::AbstractVecOrMat{<:Real},
+    chains::Int = 1,
+    samples::Int = 10 * 1000
     )
 ```
 
 **Arguments**
-* `unfolder::MCMCMatrixUnfolder` -- model
-* `kernel::Array{Float64, 2}` -- discrete kernel
-* `data::Array{Float64, 1}` -- function values
-* `data_errors::Union{Array{Float64, 1}, Array{Float64, 2}}` -- function errors
+* `unfolder` -- model
+* `kernel` -- discrete kernel
+* `data` -- function values
+* `data_errors` -- function errors
 * `chains` -- number of chains for MCMC integration
 * `samples` -- number of samples for MCMC integration
 
-**Returns:** `Dict{String, Array{Float64, 1}}` with coefficients ("coeff") and errors ("errors").
+**Returns:** `Dict{String, AbstractVector{Real}}` with coefficients ("coeff") and errors ("errors").
 """
 function solve(
     unfolder::MCMCMatrixUnfolder,
-    kernel::Array{Float64, 2},
-    data::Array{Float64, 1},
-    data_errors::Union{Array{Float64, 1}, Array{Float64, 2}},
-    chains::Int64 = 1,
-    samples::Int64 = 10 * 1000
+    kernel::AbstractMatrix{<:Real},
+    data::AbstractVector{<:Real},
+    data_errors::AbstractVecOrMat{<:Real},
+    chains::Int = 1,
+    samples::Int = 10 * 1000
     )
 
     @info "Starting solve..."
@@ -123,11 +123,11 @@ end
 
 function solve_MCMC(
     unfolder::MCMCMatrixUnfolder,
-    kernel::Array{Float64, 2},
-    data::Array{Float64, 1},
-    data_errors::Array{Float64, 2},
-    chains::Int64 = 1,
-    samples::Int64 = 10 * 1000
+    kernel::AbstractMatrix{<:Real},
+    data::AbstractVector{<:Real},
+    data_errors::AbstractMatrix{<:Real},
+    chains::Int = 1,
+    samples::Int = 10 * 1000
     )
     @info "Starting solve_MCMC..."
     model = Model(
@@ -161,18 +161,18 @@ end
 Allows to get coefficients and errors from generated data set.
 
 ```julia
-get_values(sim::ModelChains, chains::Int64, n::Int64)
+get_values(sim::ModelChains, chains::Int, n::Int)
 ```
 
 **Arguments**
-* `sim::ModelChains` -- data generated by `mcmc()`
-* `chains::Int64` -- number of chains
-* `n::Int64` -- variable list length
+* `sim` -- data generated by `mcmc()`
+* `chains` -- number of chains
+* `n` -- variable list length
 
-**Returns:** `Dict{String, Array{Float64, 1}}` with coefficients ("coeff") and errors ("errors").
+**Returns:** `Dict{String, AbstractVector{Real}}` with coefficients ("coeff") and errors ("errors").
 
 """
-function get_values(sim::ModelChains, chains::Int64, n::Int64)
+function get_values(sim::ModelChains, chains::Int, n::Int)
     values = [sim.value[:, :, j] for j in range(1, stop=chains)]
     res =  mean(values)
     coeff = []
@@ -181,7 +181,7 @@ function get_values(sim::ModelChains, chains::Int64, n::Int64)
         append!(coeff, mean(res[:, i]))
     end
     return Dict(
-        "coeff" => convert(Array{Float64}, coeff),
+        "coeff" => convert(AbstractVector{Real}, coeff),
         "errors" => cov(res),
         )
 end
@@ -195,12 +195,12 @@ MCMC model for continuous kernel. Data can be either discrete or continuous.
 ```julia
 MCMCUnfolder(
     basis::Basis,
-    omegas::Array{Array{Float64, 2}, 1},
+    omegas::Array{Array{T, 2}, 1} where T<:Real,
     method::String="EmpiricalBayes",
-    alphas::Union{Array{Float64, 1}, Nothing}=nothing,
-    low::Union{Array{Float64, 1}=nothing,
-    high::Union{Array{Float64, 1}, Nothing}=nothing,
-    alpha0::Union{Array{Float64, 1}, Nothing}=nothing,
+    alphas::Union{AbstractVector{<:Real}, Nothing}=nothing,
+    low::Union{AbstractVector{<:Real}, Nothing}=nothing,
+    high::Union{AbstractVector{<:Real}, Nothing}=nothing,
+    alpha0::Union{AbstractVector{<:Real}, Nothing}=nothing,
     )
 ```
 
@@ -223,12 +223,12 @@ mutable struct MCMCUnfolder
 
     function MCMCUnfolder(
         basis::Basis,
-        omegas::Array{Array{Float64, 2}, 1},
+        omegas::Array{Array{T, 2}, 1} where T<:Real,
         method::String="EmpiricalBayes",
-        alphas::Union{Array{Float64, 1}, Nothing}=nothing,
-        low::Union{Array{Float64, 1}, Nothing}=nothing,
-        high::Union{Array{Float64, 1}, Nothing}=nothing,
-        alpha0::Union{Array{Float64, 1}, Nothing}=nothing,
+        alphas::Union{AbstractVector{<:Real}, Nothing}=nothing,
+        low::Union{AbstractVector{<:Real}, Nothing}=nothing,
+        high::Union{AbstractVector{<:Real}, Nothing}=nothing,
+        alpha0::Union{AbstractVector{<:Real}, Nothing}=nothing,
         )
         solver = MCMCMatrixUnfolder(
             omegas, method, alphas, low, high, alpha0
@@ -243,34 +243,34 @@ end
 ```julia
 solve(
     mcmcunfolder::MCMCUnfolder,
-    kernel::Union{Function, Array{Float64, 2}},
-    data::Union{Function, Array{Float64, 1}},
-    data_errors::Union{Function, Array{Float64, 1}},
-    y::Union{Array{Float64, 1}, Nothing}=nothing,
-    chains::Int64 = 1,
-    samples::Int64 = 10 * 1000
+    kernel::Union{Function, AbstractMatrix{<:Real}},
+    data::Union{Function, AbstractVector{<:Real}},
+    data_errors::Union{Function, AbstractVector{<:Real}},
+    y::Union{AbstractVector{<:Real}, Nothing}=nothing,
+    chains::Int = 1,
+    samples::Int = 10 * 1000
     )
 ```
 
 **Arguments**
-* `gausserrorunfolder::GaussErrorUnfolder` -- model
-* `kernel::Union{Function, Array{Float64, 2}}` -- discrete or continuous kernel
-* `data::Union{Function, Array{Float64, 1}}` -- function values
-* `data_errors::Union{Function, Array{Float64, 1}}` -- function errors
-* `y::Union{Array{Float64, 1}, Nothing}` -- points to calculate function values and its errors (when data is given as a function)
+* `gausserrorunfolder` -- model
+* `kernel` -- discrete or continuous kernel
+* `data` -- function values
+* `data_errors` -- function errors
+* `y` -- points to calculate function values and its errors (when data is given as a function)
 * `chains` -- number of chains for MCMC integration
 * `samples` -- number of samples for MCMC integration
 
-**Returns:** `Dict{String, Array{Float64, 1}}` with coefficients ("coeff") and errors ("errors").
+**Returns:** `Dict{String, AbstractVector{Real}}` with coefficients ("coeff") and errors ("errors").
 """
 function solve(
     mcmcunfolder::MCMCUnfolder,
-    kernel::Union{Function, Array{Float64, 2}},
-    data::Union{Function, Array{Float64, 1}},
-    data_errors::Union{Function, Array{Float64, 1}},
-    y::Union{Array{Float64, 1}, Nothing}=nothing,
-    chains::Int64 = 1,
-    samples::Int64 = 10 * 1000
+    kernel::Union{Function, AbstractMatrix{<:Real}},
+    data::Union{Function, AbstractVector{<:Real}},
+    data_errors::Union{Function, AbstractVector{<:Real}},
+    y::Union{AbstractVector{<:Real}, Nothing}=nothing,
+    chains::Int = 1,
+    samples::Int = 10 * 1000
     )
     @info "Starting solve..."
     kernel_array, data_array, data_errors_array = check_args(

@@ -8,7 +8,7 @@ include("config.jl")
 
 """
 ```julia
-getOpticsKernels(name::String, alpha::Float64 = 1.)
+getOpticsKernels(name::String, alpha::Real = 1.)
 ```
 **Arguments**
 
@@ -18,7 +18,7 @@ getOpticsKernels(name::String, alpha::Float64 = 1.)
 
 **Returns:** kernel, function of 2 variables.
 """
-function getOpticsKernels(name::String, alpha::Float64 = 1.)
+function getOpticsKernels(name::String, alpha::Real = 1.)
     if name == "rectangular"
         return (x, y) -> rectangular(x-y, alpha)
     elseif name == "diffraction"
@@ -38,32 +38,32 @@ function getOpticsKernels(name::String, alpha::Float64 = 1.)
     end
 end
 
-function rectangular(x::Float64, alpha::Float64)
+function rectangular(x::Real, alpha::Real)
     if abs(x)/alpha < 1
         return 1. / alpha
     end
     return 0.
 end
 
-function diffraction(x::Float64, alpha::Float64)
+function diffraction(x::Real, alpha::Real)
     s0 = alpha/0.886
     return (sin(pi * x / s0) / (pi * x / s0))^2 /s0
 end
 
-gaussian(x::Float64, alpha::Float64) = (2. / alpha) * sqrt(log(2.) / pi) * exp(-4. * log(2.) * (x / alpha)^2)
+gaussian(x::Real, alpha::Real) = (2. / alpha) * sqrt(log(2.) / pi) * exp(-4. * log(2.) * (x / alpha)^2)
 
-function triangular(x::Float64, alpha::Float64)
+function triangular(x::Real, alpha::Real)
     if abs(x) / alpha <= 1
         return (1. -  abs(x) / alpha) / alpha
     end
     return 0.
 end
 
-dispersive(x::Float64, alpha::Float64) = (alpha / (2. * pi)) / (x^2 + (alpha / 2.)^2)
+dispersive(x::Real, alpha::Real) = (alpha / (2. * pi)) / (x^2 + (alpha / 2.)^2)
 
-exponential(x::Float64, alpha::Float64) = (log(2.) / alpha) * exp(-2. * log(2.) * abs(x) / alpha)
+exponential(x::Real, alpha::Real) = (log(2.) / alpha) * exp(-2. * log(2.) * abs(x) / alpha)
 
-function heaviside(x::Float64, alpha::Float64)
+function heaviside(x::Real, alpha::Real)
     if x > 0
         return 1.
     elseif x < 0

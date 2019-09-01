@@ -5,7 +5,7 @@ include("check.jl")
 
 using Optim
 
-make_sym(A::Array{Float64, 2}) = (transpose(A) + A) / 2
+make_sym(A::AbstractMatrix{<:Real}) = (transpose(A) + A) / 2
 
 
 """
@@ -15,9 +15,11 @@ Model for dicsrete data and kernel.
 
 ```julia
 GaussErrorMatrixUnfolder(
-    omegas::Array{Array{Float64, 2} ,1},
+    omegas::Array{Array{T, 2}, 1} where T<:Real,
     method::String="EmpiricalBayes",
-    alphas::Union{Array{Float64, 1}, Nothing}=nothing,
+    alphas::Union{AbstractVector{<:Real}, Nothing}=nothing,
+    low::Union{AbstractVector{<:Real}, Nothing}=nothing,
+    high::Union{AbstractVector{<:Real}, Nothing}=nothing,
     )
 ```
 `omegas` -- array of matrices that provide information about basis functions
@@ -34,30 +36,30 @@ GaussErrorMatrixUnfolder(
 
 **Fields**
 
-* `omegas::Array{Array{Float64, 2} ,1}`
-* `n::Int64` -- size of square omega matrix
+* `omegas::Array{Array{T, 2}, 1} where T<:Real`
+* `n::Int` -- size of square omega matrix
 * `method::String`
-* `alphas::Union{Array{Float64}, Nothing}`
-* `low::Union{Array{Float64, 1}, Nothing}`
-* `high::Union{Array{Float64, 1}, Nothing}`
-* `alpha0::Union{Array{Float64, 1}, Nothing}`
+* `alphas::Union{AbstractVector{<:Real}, Nothing}`
+* `low::Union{AbstractVector{<:Real}, Nothing}`
+* `high::Union{AbstractVector{<:Real}, Nothing}`
+* `alpha0::Union{AbstractVector{<:Real}, Nothing}`
 """
 mutable struct GaussErrorMatrixUnfolder
-    omegas::Array{Array{Float64, 2} ,1}
-    n::Int64
+    omegas::Array{Array{T, 2}, 1} where T<:Real
+    n::Int
     method::String
-    alphas::Union{Array{Float64}, Nothing}
-    low::Union{Array{Float64, 1}, Nothing}
-    high::Union{Array{Float64, 1}, Nothing}
-    alpha0::Union{Array{Float64, 1}, Nothing}
+    alphas::Union{AbstractVector{<:Real}, Nothing}
+    low::Union{AbstractVector{<:Real}, Nothing}
+    high::Union{AbstractVector{<:Real}, Nothing}
+    alpha0::Union{AbstractVector{<:Real}, Nothing}
 
     function GaussErrorMatrixUnfolder(
-        omegas::Array{Array{Float64, 2} ,1},
+        omegas::Array{Array{T, 2}, 1} where T<:Real,
         method::String="EmpiricalBayes",
-        alphas::Union{Array{Float64, 1}, Nothing}=nothing,
-        low::Union{Array{Float64, 1}, Nothing}=nothing,
-        high::Union{Array{Float64, 1}, Nothing}=nothing,
-        alpha0::Union{Array{Float64, 1}, Nothing}=nothing
+        alphas::Union{AbstractVector{<:Real}, Nothing}=nothing,
+        low::Union{AbstractVector{<:Real}, Nothing}=nothing,
+        high::Union{AbstractVector{<:Real}, Nothing}=nothing,
+        alpha0::Union{AbstractVector{<:Real}, Nothing}=nothing
         )
         m = check_args(omegas, method, alphas, low, high, alpha0)
         @info "GaussErrorMatrixUnfolder is created"
@@ -70,25 +72,25 @@ end
 ```julia
 solve(
     unfolder::GaussErrorMatrixUnfolder,
-    kernel::Array{Float64, 2},
-    data::Array{Float64, 1},
-    data_errors::Union{Array{Float64, 1}, Array{Float64, 2}},
+    kernel::AbstractMatrix{<:Real},
+    data::AbstractVector{<:Real},
+    data_errors::AbstractVecOrMat{<:Real}
     )
 ```
 
 **Arguments**
-* `unfolder::GaussErrorMatrixUnfolder` -- model
-* `kernel::Array{Float64, 2}` -- discrete kernel
-* `data::Array{Float64, 1}` -- function values
-* `data_errors::Union{Array{Float64, 1}, Array{Float64, 2}}` -- function errors
+* `unfolder -- model
+* `kernel` -- discrete kernel
+* `data` -- function values
+* `data_errors` -- function errors
 
-**Returns:** `Dict{String, Array{Float64, 1}}` with coefficients ("coeff"), errors ("errors") and optimal constants ("alphas").
+**Returns:** `Dict{String, AbstractVector{Real}}` with coefficients ("coeff"), errors ("errors") and optimal constants ("alphas").
 """
 function solve(
     unfolder::GaussErrorMatrixUnfolder,
-    kernel::Array{Float64, 2},
-    data::Array{Float64, 1},
-    data_errors::Union{Array{Float64, 1}, Array{Float64, 2}}
+    kernel::AbstractMatrix{<:Real},
+    data::AbstractVector{<:Real},
+    data_errors::AbstractVecOrMat{<:Real}
     )
     @info "Starting solve..."
     data_errors = check_args(unfolder, kernel, data, data_errors)
@@ -121,12 +123,12 @@ Model for continuous kernel. Data can be either discrete or continuous.
 ```julia
 GaussErrorUnfolder(
     basis::Basis,
-    omegas::Array{Array{Float64, 2}, 1},
+    omegas::Array{Array{T, 2}, 1} where T<:Real,
     method::String="EmpiricalBayes",
-    alphas::Union{Array{Float64, 1}, Nothing}=nothing,
-    low::Union{Array{Float64, 1}, Nothing}=nothing,
-    high::Union{Array{Float64, 1}, Nothing}=nothing,
-    alpha0::Union{Array{Float64, 1}, Nothing}=nothing
+    alphas::Union{AbstractVector{<:Real}, Nothing} =nothing,
+    low::Union{AbstractVector{<:Real}, Nothing} =nothing,
+    high::Union{AbstractVector{<:Real}, Nothing} =nothing,
+    alpha0::Union{AbstractVector{<:Real}, Nothing} =nothing
     )
 ```
 
@@ -154,12 +156,12 @@ mutable struct GaussErrorUnfolder
 
     function GaussErrorUnfolder(
         basis::Basis,
-        omegas::Array{Array{Float64, 2}, 1},
+        omegas::Array{Array{T, 2}, 1} where T<:Real,
         method::String="EmpiricalBayes",
-        alphas::Union{Array{Float64, 1}, Nothing}=nothing,
-        low::Union{Array{Float64, 1}, Nothing}=nothing,
-        high::Union{Array{Float64, 1}, Nothing}=nothing,
-        alpha0::Union{Array{Float64, 1}, Nothing}=nothing
+        alphas::Union{AbstractVector{<:Real}, Nothing} =nothing,
+        low::Union{AbstractVector{<:Real}, Nothing} =nothing,
+        high::Union{AbstractVector{<:Real}, Nothing} =nothing,
+        alpha0::Union{AbstractVector{<:Real}, Nothing} =nothing
         )
         solver = GaussErrorMatrixUnfolder(
             omegas, method, alphas, low, high, alpha0
@@ -174,28 +176,28 @@ end
 ```julia
 solve(
     gausserrorunfolder::GaussErrorUnfolder,
-    kernel::Union{Function, Array{Float64, 2}},
-    data::Union{Function, Array{Float64, 1}},
-    data_errors::Union{Function, Array{Float64, 1}},
-    y::Union{Array{Float64, 1}, Nothing}=nothing,
+    kernel::Union{Function, AbstractMatrix{<:Real}},
+    data::Union{Function, AbstractVector{<:Real}},
+    data_errors::Union{Function, AbstractVector{<:Real}},
+    y::Union{AbstractVector{<:Real}, Nothing}=nothing,
     )
 ```
 
 **Arguments**
-* `gausserrorunfolder::GaussErrorUnfolder` -- model
-* `kernel::Union{Function, Array{Float64, 2}}` -- discrete or continuous kernel
-* `data::Union{Function, Array{Float64, 1}}` -- function values
-* `data_errors::Union{Function, Array{Float64, 1}}` -- function errors
-* `y::Union{Array{Float64, 1}, Nothing}` -- points to calculate function values and its errors (when data is given as a function)
+* `gausserrorunfolder` -- model
+* `kernel` -- discrete or continuous kernel
+* `data` -- function values
+* `data_errors` -- function errors
+* `y` -- points to calculate function values and its errors (when data is given as a function)
 
-**Returns:** `Dict{String, Array{Float64, 1}}` with coefficients ("coeff"), errors ("errors") and optimal constants ("alphas").
+**Returns:** `Dict{String, AbstractVector{Real} with coefficients ("coeff"), errors ("errors") and optimal constants ("alphas").
 """
 function solve(
     gausserrorunfolder::GaussErrorUnfolder,
-    kernel::Union{Function, Array{Float64, 2}},
-    data::Union{Function, Array{Float64, 1}},
-    data_errors::Union{Function, Array{Float64, 1}},
-    y::Union{Array{Float64, 1}, Nothing}=nothing,
+    kernel::Union{Function, AbstractMatrix{<:Real}},
+    data::Union{Function, AbstractVector{<:Real}},
+    data_errors::Union{Function, AbstractVector{<:Real}},
+    y::Union{AbstractVector{<:Real}, Nothing}=nothing,
     )
     @info "Starting solve..."
     kernel_array, data_array, data_errors_array = check_args(

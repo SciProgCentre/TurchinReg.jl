@@ -4,24 +4,20 @@ using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
 
 """
 Type for function with its support.
-
 **Constructor**
-
 ```julia
-BaseFunction(f, support::Tuple{Float64,Float64})
-BaseFunction(f, a::Float64, b::Float64)
+BaseFunction(f, support::Tuple{<:Real,<:Real})
+BaseFunction(f, a::Real, b::Real)
 ```
-
 **Fields**
-
 * `f` -- function (type depends on the basis)
-* `support::Tuple{Float64,Float64}` -- support of the function
+* `support::Tuple{<:Real,<:Real}` -- support of the function
 """
 struct BaseFunction
     f
-    support::Tuple{Float64, Float64}
-    BaseFunction(f, support::Tuple{Float64,Float64}) = new(f, support)
-    BaseFunction(f, a::Float64, b::Float64) = new(f, (a, b))
+    support::Tuple{<:Real, <:Real}
+    BaseFunction(f, support::Tuple{<:Real, <:Real}) = new(f, support)
+    BaseFunction(f, a::Real, b::Real) = new(f, (a, b))
 end
 
 """
@@ -34,18 +30,16 @@ Base.length(basis::Basis) = Base.length(basis.basis_functions)
 
 """
 ```julia
-discretize_kernel(basis::Basis, kernel::Function, data_points::Array{Float64, 1})
+discretize_kernel(basis::Basis, kernel::Function, data_points::AbstractVector{<:Real})
 ```
 **Arguments**
-
 * `basis` -- basis
 * `kernel` -- ``K(x, y)``, kernel
 * `data_points` -- array of data points
-
-**Returns:** discretized kernel `K::Array{Float64, 2}`, ``K_{mn} = \\left(\\int_a^b K(x, y) \\psi_m(x) dx \\right)(y_n)`` - matrix of size n``\\times``m, where `m` - number of basis functions, `n` - number of data points.
+**Returns:** discretized kernel `K::Array{Real, 2}`, ``K_{mn} = \\left(\\int_a^b K(x, y) \\psi_m(x) dx \\right)(y_n)`` - matrix of size n``\\times``m, where `m` - number of basis functions, `n` - number of data points.
 """
 function discretize_kernel(
-    basis::Basis, kernel::Function, data_points::Array{Float64, 1}
+    basis::Basis, kernel::Function, data_points::AbstractVector{<:Real}
     )
 
     @info "Starting discretize kernel..."
@@ -66,45 +60,37 @@ end
 
 """
 ```julia
-omega(basis::Basis, order::Int64)
+omega(basis::Basis, order::Int)
 ```
 **Arguments**
-
 * `basis` - basis
 * `order` - order of derivatives
-
-**Returns:** `Omega::Array{Float64, 2}`, ``\\Omega_{mn} = \\int_a^b \\frac{d^{order} \\psi_m}{dx^{order}} \\frac{d^{order} \\psi_n}{dx^{order}}`` - matrix of size n``\\times``n of the mean values of derivatives of order `order`, where n - number of functions in basis.
+**Returns:** `Omega::Array{Real, 2}`, ``\\Omega_{mn} = \\int_a^b \\frac{d^{order} \\psi_m}{dx^{order}} \\frac{d^{order} \\psi_n}{dx^{order}}`` - matrix of size n``\\times``n of the mean values of derivatives of order `order`, where n - number of functions in basis.
 """
-omega(basis::Basis, order::Int64) = ()
+omega(basis::Basis, order::Int) = ()
 
 
 """
 Fourier basis with length ``2n+1``: {``0.5``, ``\\sin(\\frac{\\pi (x - \\frac{a+b}{2})}{b-a})``, ``\\cos(\\frac{\\pi (x - \\frac{a+b}{2})}{b-a})``, ..., ``\\sin(\\frac{\\pi n (x - \\frac{a+b}{2})}{b-a})``, ``\\cos(\\frac{\\pi n (x - \\frac{a+b}{2})}{b-a})``}.
-
 **Constructor**
-
 ```julia
-FourierBasis(a::Float64, b::Float64, n::Int64)
+FourierBasis(a::Real, b::Real, n::Int)
 ```
-
 `a`, `b` -- the beginning and the end of the segment
-
 `n` -- number of basis functions
-
 **Fields**
-
-* `a::Float64` -- beginning of the support
-* `b::Float64` -- end of the support
-* `n::Int64` -- number of basis functions
-* `basis_functions::Array{BaseFunction, 1}` -- array of basis functions
+* `a::Real` -- beginning of the support
+* `b::Real` -- end of the support
+* `n::Int` -- number of basis functions
+* `basis_functions::AbstractVector{BaseFunction}` -- array of basis functions
 """
 struct FourierBasis <: Basis
-    a::Float64
-    b::Float64
-    n::Int64
-    basis_functions::Array{BaseFunction, 1}
+    a::Real
+    b::Real
+    n::Int
+    basis_functions::AbstractVector{BaseFunction}
 
-    function basis_functions_fourier(n::Int64, a::Float64, b::Float64)
+    function basis_functions_fourier(n::Int, a::Real, b::Real)
         l = (b - a) / 2.
         mid = (a + b) / 2.
         func = [BaseFunction(x::Float64 -> 0.5, a, b)]
@@ -117,7 +103,7 @@ struct FourierBasis <: Basis
         return func
     end
 
-    function FourierBasis(a::Float64, b::Float64, n::Int64)
+    function FourierBasis(a::Real, b::Real, n::Int)
         if a >= b
             @error "Incorrect specification of a segment: `a` should be less than `b`."
             Base.error("Incorrect specification of a segment: `a` should be less than `b`.")
@@ -133,7 +119,7 @@ struct FourierBasis <: Basis
 end
 
 
-@memoize function omega(basis::FourierBasis, order::Int64)
+@memoize function omega(basis::FourierBasis, order::Int)
     @info "Calculating omega matrix for Fourier basis derivatives of order $order..."
     if order < 0
         @error "Order of derivative should be positive."
@@ -157,33 +143,29 @@ end
 
 """
 Cubic spline basis - B-spline of the order 3 on given knots with length ``n-4``, where n -- length of knots array.
-
 **Constructor**
 ```julia
 CubicSplineBasis(
-    knots::Array{Float64},
+    knots::AbstractVector{<:Real},
     boundary_condition::Union{Tuple{Union{String, Nothing}, Union{String, Nothing}}, Nothing, String}=nothing
     )
 ```
 `knots` -- knots of spline
-
 `boundary_condition` -- boundary conditions of basis functions. If tuple, the first element affects left bound, the second element affects right bound. If string, both sides are affected. Possible options: `"dirichlet"`, `nothing`
-
 **Fields**
-
-* `a::Float64` -- beginning of the support, matches the first element of the array `knots`
-* `b::Float64` -- end of the support, matches the last element of the array `knots`
-* `knots::Array{Float64, 1}` -- array of points on which the spline is built
-* `basis_functions::Array{BaseFunction, 1}` -- array of basis functions
+* `a::Real` -- beginning of the support, matches the first element of the array `knots`
+* `b::Real` -- end of the support, matches the last element of the array `knots`
+* `knots::AbstractVector{<:Real}` -- array of points on which the spline is built
+* `basis_functions::AbstractVector{BaseFunction}` -- array of basis functions
 """
 struct CubicSplineBasis <: Basis
-    a::Float64
-    b::Float64
-    knots::Array{Float64, 1}
-    basis_functions::Array{BaseFunction, 1}
+    a::Real
+    b::Real
+    knots::AbstractVector{<:Real}
+    basis_functions::AbstractVector{BaseFunction}
 
     function basis_functions_cubic_splines(
-        a::Float64, b::Float64, knots::Array{Float64},
+        a::Real, b::Real, knots::AbstractVector{<:Real},
         boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}}
         )
 
@@ -227,7 +209,7 @@ struct CubicSplineBasis <: Basis
         return basis_functions
     end
 
-    function CubicSplineBasis(knots::Array{Float64, 1},
+    function CubicSplineBasis(knots::AbstractVector{<:Real},
         boundary_condition::Union{Tuple{Union{String, Nothing}, Union{String, Nothing}}, Nothing, String}=nothing)
 
         if sort(knots) != knots
@@ -262,7 +244,7 @@ struct CubicSplineBasis <: Basis
 
 end
 
-@memoize function omega(basis::CubicSplineBasis, order::Int64)
+@memoize function omega(basis::CubicSplineBasis, order::Int)
     @info "Calculating omega matrix for Cubis spline basis derivatives of order $order..."
     if order < 0
         @error "Order of derivative should be positive."
@@ -289,28 +271,23 @@ end
 
 """
 Legendre polynomials basis with length ``n``.
-
 **Constructor**
-
 ```julia
-LegendreBasis(a::Float64, b::Float64, n::Int64)
+LegendreBasis(a::Real, b::Real, n::Int)
 ```
 `a`, `b` -- the beginning and the end of the support
-
 `n` -- number of basis functions
-
 **Fields**
-
-* `a::Float64` -- beginning of the support
-* `b::Float64` -- end of the support
-* `basis_functions::Array{BaseFunction, 1}` -- array of basis functions
+* `a::Real` -- beginning of the support
+* `b::Real` -- end of the support
+* `basis_functions::AbstractVector{BaseFunction}` -- array of basis functions
 """
 struct LegendreBasis <: Basis
-    a::Float64
-    b::Float64
-    basis_functions::Array{BaseFunction, 1}
+    a::Real
+    b::Real
+    basis_functions::AbstractVector{BaseFunction}
 
-    function basis_functions_legendre(a::Float64, b::Float64, n::Int64)
+    function basis_functions_legendre(a::Real, b::Real, n::Int)
         basis_functions = []
         for i = 1:n
             func_ = Fun(Legendre(), [zeros(i-1);1])
@@ -321,7 +298,7 @@ struct LegendreBasis <: Basis
         return basis_functions
     end
 
-    function LegendreBasis(a::Float64, b::Float64, n::Int64)
+    function LegendreBasis(a::Real, b::Real, n::Int)
         if a >= b
             @error "Incorrect specification of a segment: `a` should be less than `b`."
             Base.error("Incorrect specification of a segment: `a` should be less than `b`.")
@@ -337,7 +314,7 @@ struct LegendreBasis <: Basis
 end
 
 
-@memoize function omega(basis::LegendreBasis, order::Int64)
+@memoize function omega(basis::LegendreBasis, order::Int)
     @info "Calculating omega matrix for Legendre polynomials basis derivatives of order $order..."
     if order < 0
         @error "Order of derivative should be positive."
@@ -374,43 +351,36 @@ end
 
 """
 Bernstein polynomials basis.
-
 **Constructor**
-
 ```julia
 BernsteinBasis(
-    a::Float64, b::Float64, n::Int64,
+    a::Real, b::Real, n::Int,
     boundary_condition::Union{Tuple{Union{String, Nothing}, Union{String, Nothing}}, Nothing, String}=nothing
     )
 ```
 `a`, `b` -- the beginning and the end of the segment
-
 `n` -- number of basis functions
-
 `boundary_condition` -- boundary conditions of basis functions. If tuple, the first element affects left bound, the second element affects right bound. If string, both sides are affected. Possible options: `"dirichlet"`, `nothing`.
-
 **Fields**
-
-* `a::Float64` -- beginning of the support
-* `b::Float64` -- end of the support
-* `basis_functions::Array{BaseFunction, 1}` -- array of basis functions
+* `a::Real` -- beginning of the support
+* `b::Real` -- end of the support
+* `basis_functions::AbstractVector{BaseFunction}` -- array of basis functions
 * `boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}}` -- boundary conditions of basis functions. If tuple, the first element affects left bound, the second element affects right bound. If string, both sides are affected. Possible options: `"dirichlet"`, `nothing`.
 """
 struct BernsteinBasis <: Basis
-    a::Float64
-    b::Float64
-    basis_functions::Array{BaseFunction, 1}
+    a::Real
+    b::Real
+    basis_functions::AbstractVector{BaseFunction}
     boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}}
 
     @memoize function basis_functions_bernstein(
-        a::Float64, b::Float64, n::Int64,
+        a::Real, b::Real, n::Int,
         boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}}
         )
 
         basis_functions = []
         for k = 0:n
             coeff = convert(Float64, binomial(BigInt(n),BigInt(k)))
-            println(coeff)
             func = x::Float64 -> coeff  *
                 ((x - a) / (b - a))^k *
                 (1 - ((x - a) / (b - a)))^(n - k)
@@ -421,7 +391,7 @@ struct BernsteinBasis <: Basis
         function apply_condition(
             condition::Union{String, Nothing},
             side::String,
-            basis_functions::Array
+            basis_functions::AbstractVector
             )
 
             if condition == nothing
@@ -452,7 +422,7 @@ struct BernsteinBasis <: Basis
     end
 
     function BernsteinBasis(
-        a::Float64, b::Float64, n::Int64,
+        a::Real, b::Real, n::Int,
         boundary_condition::Union{
             Tuple{Union{String, Nothing}, Union{String, Nothing}},
             Nothing,
@@ -488,7 +458,7 @@ struct BernsteinBasis <: Basis
 end
 
 
-@memoize function omega(basis::BernsteinBasis, order::Int64)
+@memoize function omega(basis::BernsteinBasis, order::Int)
     @info "Calculating omega matrix for Bernstein polynomials basis derivatives of order $order..."
     if order < 0
         @error "Order of derivative should be positive."
@@ -499,7 +469,7 @@ end
     a = basis.a
     b = basis.b
 
-    @memoize function basis_function_bernstein(k::Int64, n::Int64, x::Float64)
+    @memoize function basis_function_bernstein(k::Int, n::Int, x::Real)
         if k < 0 || n < 0 || k > n
             return 0.
         end
@@ -509,7 +479,7 @@ end
             (1 - ((x - a) / (b - a)))^(n - k)
     end
 
-    @memoize function derivative(k::Int64, n::Int64, l::Int64, x::Float64)
+    @memoize function derivative(k::Int, n::Int, l::Int, x::Real)
         coeff = [convert(Float64, binomial(BigInt(l),BigInt(j))) for j = 0:l]
         basis_functions = [basis_function_bernstein(k-j, n-l, x) for j = 0:l]
         return convert(

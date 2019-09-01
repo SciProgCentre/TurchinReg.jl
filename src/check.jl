@@ -1,10 +1,10 @@
 function check_args(
-    omegas::Array{Array{Float64, 2} ,1},
+    omegas::Array{Array{T, 2}, 1} where T<:Real,
     method::String,
-    alphas::Union{Array{Float64}, Nothing},
-    low::Union{Array{Float64, 1}, Nothing},
-    high::Union{Array{Float64, 1}, Nothing},
-    alpha0::Union{Array{Float64, 1}, Nothing}
+    alphas::Union{AbstractVector{<:Real}, Nothing},
+    low::Union{AbstractVector{<:Real}, Nothing},
+    high::Union{AbstractVector{<:Real}, Nothing},
+    alpha0::Union{AbstractVector{<:Real}, Nothing}
     )
     if Base.length(omegas) == 0
         @error "Regularization matrix Omega is absent"
@@ -76,15 +76,13 @@ end
 
 function check_args(
     unfolder,
-    kernel::Array{Float64, 2},
-    data::Array{Float64, 1},
-    data_errors::Union{Array{Float64, 1}, Array{Float64, 2}},
+    kernel::AbstractMatrix{<:Real},
+    data::AbstractVector{<:Real},
+    data_errors::AbstractVecOrMat{<:Real},
     )
     m, n = size(kernel)
     if n != unfolder.n
         @error "Kernel and unfolder must have equal dimentions."
-        println(unfolder.n)
-        println(size(kernel))
         Base.error("Kernel and unfolder must have equal dimentions.")
     end
 
@@ -114,15 +112,15 @@ end
 
 
 function find_optimal_alpha(
-    omegas::Array{Array{Float64, 2}},
-    B::Array{Float64, 2},
-    b::Array{Float64, 1},
-    alpha0::Array{Float64, 1},
-    low::Array{Float64, 1},
-    high::Array{Float64, 1}
+    omegas::Array{Array{T, 2}, 1} where T<:Real,
+    B::AbstractMatrix{<:Real},
+    b::AbstractVector{<:Real},
+    alpha0::AbstractVector{<:Real},
+    low::AbstractVector{<:Real},
+    high::AbstractVector{<:Real}
     )
     @info "Starting find_optimal_alpha..."
-    function alpha_prob(a::Array{Float64, 1})
+    function alpha_prob(a::AbstractVector{<:Real})
         for i in range(1, stop=length(a))
             if (a[i] <= low[i]) || (a[i] >= high[i])
                 return -1e4
@@ -133,7 +131,7 @@ function find_optimal_alpha(
         iBa0 = make_sym(pinv(Ba0))
         dotp = transpose(b) * iBa0 * b
 
-        function det_(A::Array{Float64, 2})
+        function det_(A::Array{<:Real, 2})
             if det(A) != 0
                 detA = logabsdet(A)[1]
             else
@@ -168,10 +166,10 @@ end
 
 function check_args(
     gausserrorunfolder,
-    kernel::Union{Function, Array{Float64, 2}},
-    data::Union{Function, Array{Float64, 1}},
-    data_errors::Union{Function, Array{Float64, 1}},
-    y::Union{Array{Float64, 1}, Nothing},
+    kernel::Union{Function, AbstractMatrix{<:Real}},
+    data::Union{Function, AbstractVector{<:Real}},
+    data_errors::Union{Function, AbstractVector{<:Real}},
+    y::Union{AbstractVector{<:Real}, Nothing},
     )
 
     function check_y()
@@ -181,21 +179,21 @@ function check_args(
         end
     end
 
-    if !(typeof(kernel) == Array{Float64, 2})
+    if !(typeof(kernel)<:AbstractMatrix{<:Real})
         check_y()
         kernel_array = discretize_kernel(gausserrorunfolder.basis, kernel, y)
     else
         kernel_array = kernel
     end
 
-    if !(typeof(data) == Array{Float64, 1})
+    if !(typeof(data)<:AbstractVector{<:Real})
         check_y()
         data_array = data.(y)
     else
         data_array = data
     end
 
-    if !(typeof(data_errors) == Array{Float64, 1})
+    if !(typeof(data_errors)<:AbstractVector{<:Real})
         check_y()
         data_errors_array = data_errors.(y)
     else

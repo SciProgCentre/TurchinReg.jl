@@ -36,7 +36,7 @@ delta_f = [0.00888777, -0.00480116, 0.0396684, -0.00968618, -0.0195524,
 
 * Then define the kernel:
 ```julia
-function kernel(x::Float64, y::Float64)
+function kernel(x::Real, y::Real)
     if abs(x-y) <= 1
         return 1. -  abs(x-y)
     end
