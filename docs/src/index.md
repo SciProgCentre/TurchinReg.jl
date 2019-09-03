@@ -82,3 +82,11 @@ cov(\varphi_m, \varphi_n) = ||(K^T \Sigma^{-1} K + \alpha^* \Omega)^{-1}||_{mn}
 
 
 This package allows to apply statistical regularisation in different bases using such a prior information as smoothness and zero boundary conditions or another information provided by user in a matrix form. ``\Omega`` can be set manually or calculated for every derivative  of degree ``p``. ``\alpha`` can be calculated as a maximum of a posterior information or can be set manually.
+
+
+# Non-Gaussian random process
+If the ``f`` function errors do not have Gaussian distribution, the strategy ``\overrightarrow{\widehat{S}}`` can not be calculated analytically in general case.
+```math
+\overrightarrow{\widehat{S}}[f]=E[\overrightarrow{\varphi}|\overrightarrow{f}]=\int \overrightarrow{\varphi} P(\overrightarrow{\varphi}|\overrightarrow{f}) d\overrightarrow{\varphi}
+```
+The posterior probability ``P(\overrightarrow{\varphi}|\overrightarrow{f})`` should be obtained from MCMC sampling. It is applied in the `StatReg.jl` using `Mamba.jl` package.
