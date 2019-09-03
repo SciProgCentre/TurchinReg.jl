@@ -10,7 +10,7 @@ jobs:
       julia: 1.1
 
       stript:
-        - julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate(); Pkg.test()'
+        - julia -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate(); Pkg.test(coverage=true)'
       after_success: skip
 
 
