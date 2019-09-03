@@ -6,7 +6,7 @@ This is the documentation for `Statreg.jl`; a Julia package that allows to apply
 Let's consider the equation
 
 ```math
-f(y) = \int_a^b K(x, y) \varphi(x) dx
+f(y) = \int\limits_{a}^{b} K(x, y) \varphi(x) dx
 ```
 
  The problem is, given kernel function ``K(x, y)`` and the function ``f(y)``, to find the function ``\varphi(x)``. ``f(y)`` contains a random noise factor both from initial statistical uncertainty of ``\varphi(x)`` and additional noise from measurement procedure.
@@ -22,9 +22,9 @@ Firstly, it is necessary to go from the continuous space of functions to the par
 ```math
 f_m = K_{mn} \varphi_n,
 ```
-where ``f_m = f(y_m)``,  ``\varphi_n`` :  ``\varphi(x) = \sum_{k=1}^N \varphi_n \psi_k(x)``,  ``K_{mn} = \int_a^b K(x, y_m) \psi_n(x) dx``.
+where ``f_m = f(y_m)``,  ``\varphi_n`` :  ``\varphi(x) = \sum\limits_{k=1}^{N} \varphi_n \psi_k(x)``,  ``K_{mn} = \int\limits_{a}^{b} K(x, y_m) \psi_n(x) dx``.
 
-Let's introduce function ``\overrightarrow{S}`` that will evaluate ``\overrightarrow{\varphi}`` based on the function ``\overrightarrow{f}`` and loss function ``L(\overrightarrow{\widehat{\varphi}}, \overrightarrow{S}) = \sum_{n=1}^N \mu_n (\widehat{\varphi}_n - S_n)^2``, where ``\overrightarrow{\widehat{\varphi}}=\overrightarrow{\widehat{S}}(\overrightarrow{f})`` -- the best solution.
+Let's introduce function ``\overrightarrow{S}`` that will evaluate ``\overrightarrow{\varphi}`` based on the function ``\overrightarrow{f}`` and loss function ``L(\overrightarrow{\widehat{\varphi}}, \overrightarrow{S}) = \sum\limits_{n=1}^{N} \mu_n (\widehat{\varphi}_n - S_n)^2``, where ``\overrightarrow{\widehat{\varphi}}=\overrightarrow{\widehat{S}}(\overrightarrow{f})`` -- the best solution.
 
 For this loss function the best strategy is
 
@@ -45,7 +45,7 @@ Errors of the solution:
 We expect ``\varphi(x)`` to be relatively smooth and can choose this information as a prior.
 The matrix of the mean value of derivatives of order ``p`` can be used as a prior information about the solution.
 ```math
-\Omega_{mn} = \int_a^b \left( \frac{d^p \psi_m(x)}{dx} \right) \left( \frac{d^p \psi_n(x)}{dx} \right) dx
+\Omega_{mn} = \int\limits_{a}^{b} \left( \frac{d^p \psi_m(x)}{dx} \right) \left( \frac{d^p \psi_n(x)}{dx} \right) dx
 ```
 
 We require a certain value of the smoothness functional to be achieved:
