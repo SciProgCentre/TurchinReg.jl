@@ -67,7 +67,7 @@ omega(basis::Basis, order::Int)
 * `order` - order of derivatives
 **Returns:** `Omega::Array{Real, 2}`, ``\\Omega_{mn} = \\int_a^b \\frac{d^{order} \\psi_m}{dx^{order}} \\frac{d^{order} \\psi_n}{dx^{order}}`` - matrix of size n``\\times``n of the mean values of derivatives of order `order`, where n - number of functions in basis.
 """
-omega(basis::Basis, order::Int) = ()
+@memoize omega(basis::Basis, order::Int) = ()
 
 
 """

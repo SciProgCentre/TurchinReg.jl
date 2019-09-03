@@ -12,7 +12,7 @@ struct BSpline
             @error "BSline number should be positive."
             Base.error("BSline number should be positive.")
         end
-        if k <= 0
+        if k < 0
             @error "BSline order should be positive."
             Base.error("BSline order should be positive.")
         end
