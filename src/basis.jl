@@ -1,5 +1,6 @@
 include("config.jl")
 include("b_spline_implementation.jl")
+include("piecewise_polynomials.jl")
 using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
 
 """
@@ -244,7 +245,7 @@ struct CubicSplineBasis <: Basis
 
 end
 
-@memoize function omega(basis::CubicSplineBasis, order::Int)
+@memoize function omega(basis::CubicSplineBasis, order::Int=2)
     @info "Calculating omega matrix for Cubis spline basis derivatives of order $order..."
     if order < 0
         @error "Order of derivative should be positive."
@@ -254,13 +255,10 @@ end
     omega = zeros(Float64, n, n)
     for i = 1:n
         for j = i:n
-            omega[i, j] = quadgk(
-                x::Float64 ->
-                derivative(basis.basis_functions[i].f, x, order) *
-                derivative(basis.basis_functions[j].f, x, order),
-                a, b, rtol=config.RTOL_QUADGK, maxevals=config.MAXEVALS_QUADGK,
-                order=config.ORDER_QUADGK
-                )[1]
+            omega[i, j] = int(
+                der_order(basis.basis_functions[i].f.func, order) * der_order(basis.basis_functions[j].f.func, order),
+                a, b
+                )
             omega[j, i] = omega[i, j]
         end
     end

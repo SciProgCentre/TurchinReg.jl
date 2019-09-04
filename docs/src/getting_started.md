@@ -8,12 +8,33 @@ Pkg.clone("https://github.com/mipt-npm/StatReg.jl.git")
 ```
 
 ## Usage
+Let's consider usual function ``\varphi(x)`` to be reconstructed.
 
-To reconstruct function you need to load data (``f(y)``) and data errors (``\delta f(y)``) and define Kernel ``K(x, y)``.
+```julia
+a = 0
+b = 6.
+
+function phi(x::Real)
+    mu1 = 2.
+    mu2 = 4.
+    n1 = 4.
+    n2 = 2.
+    sig1 = 0.4
+    sig2 = 0.5
+    norm(n, mu, sig, x) = n / sqrt(2 * pi*sig^2) * exp(-(x - mu)^2 / (2 * sig^2))
+    return norm(n1, mu1, sig1, x) + norm(n2, mu2, sig2, x)
+end
+
+x = collect(range(a, stop=b, length=300))
+myplot = plot(x, phi.(x))
+```
+
+
+To reconstruct function you need to load data (``f(y)``) and data errors (``\delta f(y)``) and define kernel ``K(x, y)``.
 There are two possibilities: use vector & matrix form or continuous form.
 In the first case ``K(x, y)`` is matrix ``n \times m``, ``f(y)`` and ``\delta f(y)`` - n-dimensional vectors.
 In the second case ``K(x, y)`` is a function, ``f(y)`` and ``\delta f(y)`` can be either functions or vectors.
-If they are functions, knot vector ``y`` should be specified.
+If they are functions, knot vector ``y`` should be specified (points where the measurement is taken).
 
 * Define data and errors (`y` is a list of measurement points, `f` is a list of function values at these points, `delta_f` is a list of error in these points)
 
