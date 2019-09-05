@@ -20,6 +20,7 @@ GaussErrorMatrixUnfolder(
     alphas::Union{AbstractVector{<:Real}, Nothing}=nothing,
     low::Union{AbstractVector{<:Real}, Nothing}=nothing,
     high::Union{AbstractVector{<:Real}, Nothing}=nothing,
+    alpha0::Union{AbstractVector{<:Real}, Nothing}=nothing
     )
 ```
 `omegas` -- array of matrices that provide information about basis functions

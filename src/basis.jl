@@ -166,7 +166,7 @@ struct CubicSplineBasis <: Basis
     basis_functions::AbstractVector{BaseFunction}
 
     function basis_functions_cubic_splines(
-        a::Real, b::Real, knots::AbstractVector{<:Real},
+        segment_a::Real, segment_b::Real, knots::AbstractVector{<:Real},
         boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}}
         )
 
@@ -174,7 +174,7 @@ struct CubicSplineBasis <: Basis
         basis_functions = []
         for i = 0:(length(knots)-5)
             func = BSpline(i, k, knots)
-            support = (a, b)
+            support = (segment_a, segment_b)
             push!(basis_functions, BaseFunction(func, support))
         end
 
@@ -227,16 +227,16 @@ struct CubicSplineBasis <: Basis
                 knots[3:end-2];
                 [knots[end] for i = 1:4]
                 ]
-
+        segment_a, segment_b = knots[1], knots[end]
         if typeof(boundary_condition) == String || typeof(boundary_condition) == Nothing
             basis_functions = basis_functions_cubic_splines(
-                a, b, knots, (boundary_condition, boundary_condition)
+                segment_a, segment_b, knots, (boundary_condition, boundary_condition)
                 )
             @info "Cubic spline basis is created."
             return new(knots[1], knots[end], knots, basis_functions)
         else
             basis_functions = basis_functions_cubic_splines(
-                a, b, knots, boundary_condition
+                segment_a, segment_b, knots, boundary_condition
                 )
             @info "Cubic spline basis is created."
             return new(knots[1], knots[end], knots, basis_functions)
@@ -255,9 +255,11 @@ end
     omega = zeros(Float64, n, n)
     for i = 1:n
         for j = i:n
+            segment_a = max(basis.basis_functions[i].support[1], basis.basis_functions[j].support[1])
+            segment_b = min(basis.basis_functions[i].support[2], basis.basis_functions[j].support[2])
             omega[i, j] = int(
                 der_order(basis.basis_functions[i].f.func, order) * der_order(basis.basis_functions[j].f.func, order),
-                a, b
+                segment_a, segment_b
                 )
             omega[j, i] = omega[i, j]
         end
@@ -337,7 +339,7 @@ end
             maxevals=config.MAXEVALS_QUADGK, order=config.ORDER_QUADGK
             )[1]
             if omega[i, j] == 0 && i == j
-                @warn "Integral of squared derivative is 0, something went wrong"
+                @warn "Integral of squared derivative is 0, omega matrix will be singular"
             end
             omega[j, i] = omega[i, j]
         end
@@ -508,7 +510,7 @@ end
             a, b, rtol=config.RTOL_QUADGK,
             maxevals=config.MAXEVALS_QUADGK, order=config.ORDER_QUADGK)[1]
             if omega[i+1, j+1] == 0 && i == j
-                @warn "Integral of squared derivative is 0, something went wrong"
+                @warn "Integral of squared derivative is 0, omega matrix will be singular"
             end
             omega[j+1, i+1] = omega[i+1, j+1]
         end
