@@ -1,4 +1,4 @@
-using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
+"""using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
 include("config.jl")
 
 struct BSpline
@@ -69,4 +69,52 @@ function derivative(b_spline::BSpline, x::Real, deg::Int)
     return k * (first - second)
 end
 
-(b_spline::BSpline)(x::Real) = b_spline.func(x)
+(b_spline::BSpline)(x::Real) = b_spline.func(x) """
+
+import Pkg
+using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun, Polynomials
+include("config.jl")
+
+struct BSpline
+    i::Int64
+    k::Int64
+    knots::Array{Float64}
+    func::Function
+
+    function BSpline(i::Int64, k::Int64, knots::Array{Float64, 1})
+        if i < 0
+            @error "BSline number should be positive."
+            Base.error("BSline number should be positive.")
+        end
+        if k <= 0
+            @error "BSline order should be positive."
+            Base.error("BSline order should be positive.")
+        end
+
+        function b_spline_function(i::Int64, k::Int64, knots::Array{Float64, 1})
+            if  k == 0
+                if x >= knots[i+1] && x < knots[i+2]
+                    return 1.
+                else
+                    return 0.
+                end
+            end
+            first = 0.
+            second = 0.
+            if !isapprox(abs(knots[i+k+1]-knots[i+1]) + 1, 1)
+                first = (Poly([0, 1])-knots[i+1])/
+                    (knots[i+k+1]-knots[i+1])*b_spline_function(i, k-1, knots)
+            end
+
+            if !isapprox(abs(knots[i+k+1+1]-knots[i+1+1]) + 1, 1)
+                second = (knots[i+k+1+1]-Poly([0, 1]))/
+                    (knots[i+k+1+1]-knots[i+1+1])*b_spline_function(i+1, k-1, knots)
+            end
+            return first+second
+        end
+
+        return new(i, k, knots, b_spline_function(i, k, knots))
+    end
+end
+
+(b_spline::BSpline)(x::Float64) = b_spline.func(x)
