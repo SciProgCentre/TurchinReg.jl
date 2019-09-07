@@ -13,7 +13,7 @@ include("../src/config.jl")
 include("../src/mcmc.jl")
 include("../src/check.jl")
 # include("../src/StatReg.jl")
-# using ../srcStatReg
+# using ../src/StatReg
 
 using Documenter
 

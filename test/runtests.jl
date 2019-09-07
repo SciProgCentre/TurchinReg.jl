@@ -188,13 +188,13 @@ end
     @test @returntrue model_3, line3, inits3, samples3, burnin3, thin3, chains3 = solve(model_cubic_spline3, getOpticsKernels("rectangular"), f, sig, y)
     @test @returntrue model_4, line4, inits4, samples4, burnin4, thin4, chains4 = solve(model_cubic_spline4, getOpticsKernels("triangular"), f, sig, y)
 
-    @test @returntrue sim1 = mcmc(model_1, line1, inits1, samples1, burnin=burnin1, thin=thin1, chains=chains1)
+    @test @returntrue sim1 = mcmc(model_1, line1, inits1, 100, burnin=burnin1, thin=thin1, chains=chains1)
     @test @returntrue res1 = get_values(sim1, chains1, length(basis_cubic_spline))
-    @test @returntrue sim2 = mcmc(model_2, line2, inits2, samples2, burnin=burnin2, thin=thin2, chains=chains2)
+    @test @returntrue sim2 = mcmc(model_2, line2, inits2, 100, burnin=burnin2, thin=thin2, chains=chains2)
     @test @returntrue res2 = get_values(sim2, chains2, length(basis_cubic_spline))
-    @test @returntrue sim3 = mcmc(model_3, line3, inits3, samples3, burnin=burnin3, thin=thin3, chains=chains3)
+    @test @returntrue sim3 = mcmc(model_3, line3, inits3, 100, burnin=burnin3, thin=thin3, chains=chains3)
     @test @returntrue res3 = get_values(sim3, chains3, length(basis_cubic_spline))
-    @test @returntrue sim4 = mcmc(model_4, line4, inits4, samples4, burnin=burnin4, thin=thin4, chains=chains4)
+    @test @returntrue sim4 = mcmc(model_4, line4, inits4, 100, burnin=burnin4, thin=thin4, chains=chains4)
     @test @returntrue res4 = get_values(sim4, chains4, length(basis_cubic_spline))
 
     @test @returntrue model_cubic_spline1_matrix = MCMCMatrixUnfolder([omega_cubic_spline], "EmpiricalBayes", nothing, [1e-8], [10.], [0.3])
@@ -207,13 +207,13 @@ end
     @test @returntrue model_3, line3, inits3, samples3, burnin3, thin3, chains3 = solve(model_cubic_spline3_matrix, discretize_kernel(basis_cubic_spline, getOpticsKernels("rectangular"), y), f, sig)
     @test @returntrue model_4, line4, inits4, samples4, burnin4, thin4, chains4 = solve(model_cubic_spline4_matrix, discretize_kernel(basis_cubic_spline, getOpticsKernels("triangular"), y), f, sig)
 
-    @test @returntrue sim1 = mcmc(model_1, line1, inits1, samples1, burnin=burnin1, thin=thin1, chains=chains1)
+    @test @returntrue sim1 = mcmc(model_1, line1, inits1, 100, burnin=burnin1, thin=thin1, chains=chains1)
     @test @returntrue res1 = get_values(sim1, chains1, length(basis_cubic_spline))
-    @test @returntrue sim2 = mcmc(model_2, line2, inits2, samples2, burnin=burnin2, thin=thin2, chains=chains2)
+    @test @returntrue sim2 = mcmc(model_2, line2, inits2, 100, burnin=burnin2, thin=thin2, chains=chains2)
     @test @returntrue res2 = get_values(sim2, chains2, length(basis_cubic_spline))
-    @test @returntrue sim3 = mcmc(model_3, line3, inits3, samples3, burnin=burnin3, thin=thin3, chains=chains3)
+    @test @returntrue sim3 = mcmc(model_3, line3, inits3, 100, burnin=burnin3, thin=thin3, chains=chains3)
     @test @returntrue res3 = get_values(sim3, chains3, length(basis_cubic_spline))
-    @test @returntrue sim4 = mcmc(model_4, line4, inits4, samples4, burnin=burnin4, thin=thin4, chains=chains4)
+    @test @returntrue sim4 = mcmc(model_4, line4, inits4, 100, burnin=burnin4, thin=thin4, chains=chains4)
     @test @returntrue res4 = get_values(sim4, chains4, length(basis_cubic_spline))
 end
 
