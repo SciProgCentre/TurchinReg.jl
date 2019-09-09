@@ -5,12 +5,14 @@ using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
 
 """
 Type for function with its support.
-**Constructor**
+
 ```julia
 BaseFunction(f, support::Tuple{<:Real,<:Real})
 BaseFunction(f, a::Real, b::Real)
 ```
+
 **Fields**
+
 * `f` -- function (type depends on the basis)
 * `support::Tuple{<:Real,<:Real}` -- support of the function
 """
@@ -35,9 +37,9 @@ discretize_kernel(basis::Basis, kernel::Function, data_points::AbstractVector{<:
 ```
 **Arguments**
 * `basis` -- basis
-* `kernel` -- ``K(x, y)``, kernel
+* `kernel` -- kernel function
 * `data_points` -- array of data points
-**Returns:** discretized kernel `K::Array{Real, 2}`, ``K_{mn} = \\left(\\int_a^b K(x, y) \\psi_m(x) dx \\right)(y_n)`` - matrix of size n``\\times``m, where `m` - number of basis functions, `n` - number of data points.
+**Returns:** discretized kernel `K::Array{Real, 2}`, ``K_{mn} = \\int\\limits_a^b K(x, y_n) \\psi_m(x) dx`` - matrix of size n``\\times``m, where ``m`` - number of basis functions, ``n`` - number of data points.
 """
 function discretize_kernel(
     basis::Basis, kernel::Function, data_points::AbstractVector{<:Real}
@@ -61,25 +63,27 @@ end
 
 """
 ```julia
-omega(basis::Basis, order::Int)
+omega(basis::Basis, ord::Int)
 ```
 **Arguments**
 * `basis` - basis
-* `order` - order of derivatives
-**Returns:** `Omega::Array{Real, 2}`, ``\\Omega_{mn} = \\int_a^b \\frac{d^{order} \\psi_m}{dx^{order}} \\frac{d^{order} \\psi_n}{dx^{order}}`` - matrix of size n``\\times``n of the mean values of derivatives of order `order`, where n - number of functions in basis.
+* `ord` - order of derivatives
+**Returns:** `Omega::Array{Real, 2}`, ``\\Omega_{mn} = \\int\\limits_a^b \\frac{d^{ord} \\psi_m}{dx^{ord}} \\frac{d^{ord} \\psi_n}{dx^{ord}}`` - matrix of size n``\\times``n of the mean values of derivatives of order `ord`, where n - number of functions in basis.
 """
-omega(basis::Basis, order::Int) = ()
+omega(basis::Basis, ord::Int) = ()
 
 
 """
 Fourier basis with length ``2n+1``: {``0.5``, ``\\sin(\\frac{\\pi (x - \\frac{a+b}{2})}{b-a})``, ``\\cos(\\frac{\\pi (x - \\frac{a+b}{2})}{b-a})``, ..., ``\\sin(\\frac{\\pi n (x - \\frac{a+b}{2})}{b-a})``, ``\\cos(\\frac{\\pi n (x - \\frac{a+b}{2})}{b-a})``}.
-**Constructor**
+
 ```julia
 FourierBasis(a::Real, b::Real, n::Int)
 ```
 `a`, `b` -- the beginning and the end of the segment
 `n` -- number of basis functions
+
 **Fields**
+
 * `a::Real` -- beginning of the support
 * `b::Real` -- end of the support
 * `n::Int` -- number of basis functions
@@ -143,8 +147,8 @@ end
 
 
 """
-Cubic spline basis - B-spline of the order 3 on given knots with length ``n-4``, where n -- length of knots array.
-**Constructor**
+Cubic spline basis on given knots with length ``n``, where n -- length of knots array.
+
 ```julia
 CubicSplineBasis(
     knots::AbstractVector{<:Real},
@@ -153,7 +157,9 @@ CubicSplineBasis(
 ```
 `knots` -- knots of spline
 `boundary_condition` -- boundary conditions of basis functions. If tuple, the first element affects left bound, the second element affects right bound. If string, both sides are affected. Possible options: `"dirichlet"`, `nothing`
+
 **Fields**
+
 * `a::Real` -- beginning of the support, matches the first element of the array `knots`
 * `b::Real` -- end of the support, matches the last element of the array `knots`
 * `knots::AbstractVector{<:Real}` -- array of points on which the spline is built
@@ -271,13 +277,16 @@ end
 
 """
 Legendre polynomials basis with length ``n``.
-**Constructor**
+
 ```julia
 LegendreBasis(a::Real, b::Real, n::Int)
 ```
+
 `a`, `b` -- the beginning and the end of the support
 `n` -- number of basis functions
+
 **Fields**
+
 * `a::Real` -- beginning of the support
 * `b::Real` -- end of the support
 * `basis_functions::AbstractVector{BaseFunction}` -- array of basis functions
@@ -351,17 +360,20 @@ end
 
 """
 Bernstein polynomials basis.
-**Constructor**
+
 ```julia
 BernsteinBasis(
     a::Real, b::Real, n::Int,
     boundary_condition::Union{Tuple{Union{String, Nothing}, Union{String, Nothing}}, Nothing, String}=nothing
     )
 ```
+
 `a`, `b` -- the beginning and the end of the segment
 `n` -- number of basis functions
 `boundary_condition` -- boundary conditions of basis functions. If tuple, the first element affects left bound, the second element affects right bound. If string, both sides are affected. Possible options: `"dirichlet"`, `nothing`.
+
 **Fields**
+
 * `a::Real` -- beginning of the support
 * `b::Real` -- end of the support
 * `basis_functions::AbstractVector{BaseFunction}` -- array of basis functions
@@ -509,9 +521,6 @@ end
             derivative(j, n_true_value, order, x),
             a, b, rtol=config.RTOL_QUADGK,
             maxevals=config.MAXEVALS_QUADGK, order=config.ORDER_QUADGK)[1]
-            if omega[i+1, j+1] == 0 && i == j
-                @warn "Integral of squared derivative is 0, omega matrix will be singular"
-            end
             omega[j+1, i+1] = omega[i+1, j+1]
         end
     end

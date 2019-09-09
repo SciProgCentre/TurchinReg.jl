@@ -5,7 +5,7 @@ include("config.jl")
 """
 Constructs solution function by coefficients, basis and errors.
 
-**Constructor**
+
 
 ```julia
 PhiVec(coeff::Array{<:Real}, basis::Basis, errors::Array{<:Real})
@@ -19,8 +19,7 @@ PhiVec(result::Dict{String, Array{<:Real}}, basis::Basis)
 * `basis::Basis` -- basis
 * `errors::Union{Array{<:Real}, Nothing}` -- coefficients of decomposition of a function errors in basis
 * `phi_function(x::Real)`::Function -- returns constructed function's value at given point
-* `error_function(x::Real)`::Union{Function, Nothing} -- returns constructed function's error at given point,
- if errors are specified, otherwise is `nothing`
+* `error_function(x::Real)`::Union{Function, Nothing} -- returns constructed function's error at given point, if errors are specified, otherwise is `nothing`
 """
 struct PhiVec
     coeff::AbstractVector{<:Real}

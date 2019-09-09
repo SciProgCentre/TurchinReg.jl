@@ -2,69 +2,15 @@
 
 ## Kernel
 Kernel can be specified as a matrix or as a function.
-Initialize a kernel as a function:
+It is possible to set arbitrary function of 2 variables or use one of predefined kernels.
 
 
 ```@docs
 getOpticsKernels(name::String,)
 ```
 
-Available kernels:
-* `rectangular`:
-```math
-K(x, y) =
-\begin{cases}
-1, \text{if } \frac{|x-y|}{\alpha} < 1
-\\
-0, \text{otherwise}
-\end{cases}
-```
-
-* `diffraction`:
-```math
-K(x, y) = \left(\frac{sin(\frac{\pi (x-y)}{s_0})}{\frac{\pi (x-y)}{s_0}}\right)^2
-```
-```math
-s_0 = \frac{\alpha}{0.886}
-```
-
-* `gaussian`:
-```math
-K(x, y) = \frac{2}{\alpha}\sqrt{\frac{\ln2}{\pi}}e^{4\ln2\left(\frac{x-y}{\alpha}\right)^2}
-```
-
-* `triangular`:
-```math
-K(x, y) =
-\begin{cases}
-\frac{1 - \frac{|x-y|}{\alpha}}{\alpha}, \text{if } \frac{|x-y|}{\alpha} < 1
-\\
-0, \text{otherwise}
-\end{cases}
-```
-
-* `dispersive`:
-```math
-K(x, y) = \frac{\alpha}{2 \pi}\left((x-y)^2 + \left(\frac{\alpha}{2}\right)^2\right)
-```
-
-* `exponential`:
-```math
-K(x, y) = \frac{\ln2}{\alpha}e^{2\ln2\frac{|x-y|}{\alpha}}
-```
-
-* `heaviside`:
-```math
-K(x, y) =
-\begin{cases}
-1, \text{if } x>0
-\\
-0, \text{otherwise}
-\end{cases}
-```
-
 ```@docs
-discretize_kernel(basis::Basis, kernel::Function, xs::Array{<:Real, 1})
+discretize_kernel(basis::Basis, kernel::Function, data_points::AbstractVector{<:Real})
 ```
 
 ## Basis
@@ -105,7 +51,7 @@ LegendreBasis
 BernsteinBasis
 ```
 
-## Gaussian noise distribution with alpha as argmax of posterior probability
+## Gaussian noise distribution
 
 ### Model
 
@@ -122,23 +68,23 @@ GaussErrorUnfolder
 ```@docs
 solve(
     unfolder::GaussErrorMatrixUnfolder,
-    kernel::Array{<:Real, 2},
-    data::Array{<:Real, 1},
-    data_errors::Union{Array{<:Real, 1}, Array{<:Real, 2}},
+    kernel::AbstractMatrix{<:Real},
+    data::AbstractVector{<:Real},
+    data_errors::AbstractVecOrMat{<:Real}
     )
 ```
 
 ```@docs
 solve(
     gausserrorunfolder::GaussErrorUnfolder,
-    kernel::Union{Function, Array{<:Real, 2}},
-    data::Union{Function, Array{<:Real, 1}},
-    data_errors::Union{Function, Array{<:Real, 1}},
-    y::Union{Array{<:Real, 1}, Nothing},
+    kernel::Union{Function, AbstractMatrix{<:Real}},
+    data::Union{Function, AbstractVector{<:Real}},
+    data_errors::Union{Function, AbstractVector{<:Real}},
+    y::Union{AbstractVector{<:Real}, Nothing}=nothing,
     )
 ```
 
-## Any othes noise distribution with alpha as argmax of posterior probability
+## Non-Gaussian noise distribution
 
 ### Model
 

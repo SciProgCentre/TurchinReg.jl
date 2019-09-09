@@ -8,9 +8,9 @@ include("check.jl")
 
 
 """
-MCMC model for dicsrete data and kernel.
+MCMC model for discrete data and kernel.
 
-**Constructor**
+
 
 ```julia
 MCMCMatrixUnfolder(
@@ -69,7 +69,7 @@ end
 
 
 """
-MCMC solver for dicsrete data and kernel.
+MCMC solver for discrete data and kernel.
 
 ```julia
 solve(
@@ -190,7 +190,7 @@ end
 """
 MCMC model for continuous kernel. Data can be either discrete or continuous.
 
-**Constructor**
+
 
 ```julia
 MCMCUnfolder(
