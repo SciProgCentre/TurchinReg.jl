@@ -1,7 +1,3 @@
-include("basis.jl")
-include("config.jl")
-
-
 """
 Constructs solution function by coefficients, basis and errors.
 

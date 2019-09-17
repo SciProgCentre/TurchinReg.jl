@@ -1,7 +1,4 @@
-include("config.jl")
 include("b_spline_implementation.jl")
-include("piecewise_polynomials.jl")
-using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
 
 """
 Type for function with its support.

@@ -1,10 +1,3 @@
-include("basis.jl")
-include("vector.jl")
-include("config.jl")
-include("check.jl")
-
-using Optim
-
 make_sym(A::AbstractMatrix{<:Real}) = (transpose(A) + A) / 2
 
 

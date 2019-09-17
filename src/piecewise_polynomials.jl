@@ -1,5 +1,3 @@
-using Polynomials
-
 struct SegmentPiecewisePoly
     polys::Vector
     knots::Vector{<:Real}

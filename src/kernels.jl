@@ -1,11 +1,3 @@
-#=
-kernels:
-- Julia version: 1.1.0
-- Author: ta_nyan
-- Date: 2019-03-30
-=#
-include("config.jl")
-
 """
 ```julia
 getOpticsKernels(name::String, alpha::Real = 1.)

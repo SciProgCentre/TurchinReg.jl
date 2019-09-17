@@ -1,12 +1,3 @@
-using Mamba
-
-include("basis.jl")
-include("vector.jl")
-include("config.jl")
-include("gauss_error.jl")
-include("check.jl")
-
-
 """
 MCMC model for discrete data and kernel.
 

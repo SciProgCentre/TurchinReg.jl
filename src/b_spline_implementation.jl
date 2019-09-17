@@ -1,7 +1,4 @@
-# using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
-include("config.jl")
 include("piecewise_polynomials.jl")
-
 
 struct BSpline
     i::Int
