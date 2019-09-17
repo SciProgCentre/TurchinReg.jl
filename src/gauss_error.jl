@@ -1,17 +1,10 @@
-include("basis.jl")
-include("vector.jl")
-include("config.jl")
-include("check.jl")
-
-using Optim
-
 make_sym(A::AbstractMatrix{<:Real}) = (transpose(A) + A) / 2
 
 
 """
-Model for dicsrete data and kernel.
+Model for discrete data and kernel.
 
-**Constructor**
+
 
 ```julia
 GaussErrorMatrixUnfolder(
@@ -20,6 +13,7 @@ GaussErrorMatrixUnfolder(
     alphas::Union{AbstractVector{<:Real}, Nothing}=nothing,
     low::Union{AbstractVector{<:Real}, Nothing}=nothing,
     high::Union{AbstractVector{<:Real}, Nothing}=nothing,
+    alpha0::Union{AbstractVector{<:Real}, Nothing}=nothing
     )
 ```
 `omegas` -- array of matrices that provide information about basis functions
@@ -79,7 +73,7 @@ solve(
 ```
 
 **Arguments**
-* `unfolder -- model
+* `unfolder` -- model
 * `kernel` -- discrete kernel
 * `data` -- function values
 * `data_errors` -- function errors
@@ -118,7 +112,7 @@ end
 """
 Model for continuous kernel. Data can be either discrete or continuous.
 
-**Constructor**
+
 
 ```julia
 GaussErrorUnfolder(

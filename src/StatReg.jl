@@ -1,9 +1,17 @@
 module StatReg
 
-    include("basis.jl")
-    include("gauss_error.jl")
-    include("vector.jl")
+    using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
+    using Optim
+    using Mamba
+    using Logging
+    using Polynomials
+
     include("config.jl")
+    include("kernels.jl")
+    include("basis.jl")
+    include("vector.jl")
+    include("check.jl")
+    include("gauss_error.jl")
     include("mcmc.jl")
 
     export BaseFunction, Basis, omega, FourierBasis, CubicSplineBasis, LegendreBasis, BernsteinBasis
@@ -11,4 +19,6 @@ module StatReg
     export PhiVec, call, errors
     export config, Config
     export MCMCMatrixUnfolder, MCMCUnfolder, get_values
+    export getOpticsKernels
+
 end

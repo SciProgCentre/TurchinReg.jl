@@ -1,11 +1,3 @@
-#=
-kernels:
-- Julia version: 1.1.0
-- Author: ta_nyan
-- Date: 2019-03-30
-=#
-include("config.jl")
-
 """
 ```julia
 getOpticsKernels(name::String, alpha::Real = 1.)
@@ -17,6 +9,60 @@ getOpticsKernels(name::String, alpha::Real = 1.)
 * `alpha` - kernel function parameter
 
 **Returns:** kernel, function of 2 variables.
+
+Available kernels:
+* `rectangular`:
+```math
+K(x, y) =
+\\begin{cases}
+1, \\text{if } \\frac{|x-y|}{\\alpha} < 1
+\\
+\\text{; } 0 \\text{ otherwise}
+\\end{cases}
+```
+
+* `diffraction`:
+```math
+K(x, y) = \\left(\\frac{sin(\\frac{\\pi (x-y)}{s_0})}{\\frac{\\pi (x-y)}{s_0}}\\right)^2
+```
+```math
+s_0 = \\frac{\\alpha}{0.886}
+```
+
+* `gaussian`:
+```math
+K(x, y) = \\frac{2}{\\alpha}\\sqrt{\\frac{\\ln2}{\\pi}}e^{4\\ln2\\left(\\frac{x-y}{\\alpha}\\right)^2}
+```
+
+* `triangular`:
+```math
+K(x, y) =
+\\begin{cases}
+\\frac{1 - \\frac{|x-y|}{\\alpha}}{\\alpha}, \\text{if } \\frac{|x-y|}{\\alpha} < 1
+\\
+\\text{; } 0 \\text{ otherwise}
+\\end{cases}
+```
+
+* `dispersive`:
+```math
+K(x, y) = \\frac{\\alpha}{2 \\pi}\\left((x-y)^2 + \\left(\\frac{\\alpha}{2}\\right)^2\\right)
+```
+
+* `exponential`:
+```math
+K(x, y) = \\frac{\\ln2}{\\alpha}e^{2\\ln2\\frac{|x-y|}{\\alpha}}
+```
+
+* `heaviside`:
+```math
+K(x, y) =
+\\begin{cases}
+1, \\text{if } x>0
+\\
+\\text{; }  0 \\text{ otherwise}
+\\end{cases}
+```
 """
 function getOpticsKernels(name::String, alpha::Real = 1.)
     if name == "rectangular"

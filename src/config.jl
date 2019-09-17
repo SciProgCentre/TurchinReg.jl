@@ -1,5 +1,3 @@
-using Logging
-
 mutable struct Config
     RTOL_QUADGK::Real# = 1e-8
     MAXEVALS_QUADGK::Real# = 1e5
