@@ -169,7 +169,7 @@ end
 """
 ```julia
 solve(
-    gausserrorunfolder::GaussErrorUnfolder,
+    unfolder::GaussErrorUnfolder,
     kernel::Union{Function, AbstractMatrix{<:Real}},
     data::Union{Function, AbstractVector{<:Real}},
     data_errors::Union{Function, AbstractVector{<:Real}},
@@ -178,7 +178,7 @@ solve(
 ```
 
 **Arguments**
-* `gausserrorunfolder` -- model
+* `unfolder` -- model
 * `kernel` -- discrete or continuous kernel
 * `data` -- function values
 * `data_errors` -- function errors
@@ -187,7 +187,7 @@ solve(
 **Returns:** `Dict{String, AbstractVector{Real} with coefficients ("coeff"), errors ("errors") and optimal constants ("alphas").
 """
 function solve(
-    gausserrorunfolder::GaussErrorUnfolder,
+    unfolder::GaussErrorUnfolder,
     kernel::Union{Function, AbstractMatrix{<:Real}},
     data::Union{Function, AbstractVector{<:Real}},
     data_errors::Union{Function, AbstractVector{<:Real}},
@@ -195,10 +195,10 @@ function solve(
     )
     @info "Starting solve..."
     kernel_array, data_array, data_errors_array = check_args(
-        gausserrorunfolder, kernel, data, data_errors, y
+        unfolder, kernel, data, data_errors, y
         )
     result = solve(
-        gausserrorunfolder.solver,
+        unfolder.solver,
         kernel_array, data_array, data_errors_array
         )
     @info "Ending solve..."

@@ -165,7 +165,7 @@ end
 
 
 function check_args(
-    gausserrorunfolder,
+    unfolder,
     kernel::Union{Function, AbstractMatrix{<:Real}},
     data::Union{Function, AbstractVector{<:Real}},
     data_errors::Union{Function, AbstractVector{<:Real}},
@@ -181,7 +181,7 @@ function check_args(
 
     if !(typeof(kernel)<:AbstractMatrix{<:Real})
         check_y()
-        kernel_array = discretize_kernel(gausserrorunfolder.basis, kernel, y)
+        kernel_array = discretize_kernel(unfolder.basis, kernel, y)
     else
         kernel_array = kernel
     end

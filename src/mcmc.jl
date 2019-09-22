@@ -282,7 +282,7 @@ solve(
 ```
 
 **Arguments**
-* `gausserrorunfolder` -- model
+* `unfolder` -- model
 * `kernel` -- discrete or continuous kernel
 * `data` -- function values
 * `data_errors` -- function errors

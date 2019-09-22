@@ -76,7 +76,7 @@ solve(
 
 ```@docs
 solve(
-    gausserrorunfolder::GaussErrorUnfolder,
+    unfolder::GaussErrorUnfolder,
     kernel::Union{Function, AbstractMatrix{<:Real}},
     data::Union{Function, AbstractVector{<:Real}},
     data_errors::Union{Function, AbstractVector{<:Real}},
@@ -101,30 +101,38 @@ MCMCUnfolder
 ```@docs
 solve(
     mcmcunfolder::MCMCUnfolder,
-    kernel::Union{Function, Array{<:Real, 2}},
-    data::Union{Function, Array{<:Real, 1}},
-    data_errors::Union{Function, Array{<:Real, 1}},
-    y::Union{Array{<:Real, 1}, Nothing}=nothing,
+    kernel::Union{Function, AbstractMatrix{<:Real}},
+    data::Union{Function, AbstractVector{<:Real}},
+    data_errors::Union{Function, AbstractVector{<:Real}},
+    y::Union{AbstractVector{<:Real}, Nothing}=nothing;
+    model::Union{Model, String} = "Gaussian",
+    samples::Int = 10 * 1000,
+    burnin::Int = 0,
+    thin::Int = 1,
     chains::Int = 1,
-    samples::Int = 10 * 1000
+    verbose::Bool = false
     )
 ```
 
 ```@docs
 solve(
     unfolder::MCMCMatrixUnfolder,
-    kernel::Array{<:Real, 2},
-    data::Array{<:Real, 1},
-    data_errors::Union{Array{<:Real, 1}, Array{<:Real, 2}},
+    kernel::AbstractMatrix{<:Real},
+    data::AbstractVector{<:Real},
+    data_errors::AbstractVecOrMat{<:Real};
+    model::Union{Model, String} = "Gaussian",
+    samples::Int = 10 * 1000,
+    burnin::Int = 0,
+    thin::Int = 1,
     chains::Int = 1,
-    samples::Int = 10 * 1000
+    verbose::Bool = false
     )
 ```
 
 ## Result
 
 ```@docs
-get_values(sim::ModelChains, chains::Int, n::Int)
+get_values
 ```
 
 ```@docs
