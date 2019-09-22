@@ -1,9 +1,14 @@
-include("../src/gauss_error.jl")
-include("../src/kernels.jl")
-include("../src/mcmc.jl")
-include("../src/utils.jl")
+include("../src/StatReg.jl")
+using .StatReg
 
-using Test, QuadGK, Random, Distributions
+include("../src/utils.jl")
+include("../src/config.jl")
+include("../src/b_spline_implementation.jl")
+include("../src/check.jl")
+include("../src/piecewise_polynomials.jl")
+
+
+using Test, QuadGK, Random, Distributions, Polynomials, Mamba
 
 Random.seed!(1234)
 
@@ -155,20 +160,20 @@ end
 
 
 @testset "Gaussian errors" begin
-    @test @returntrue model_fourier = GaussErrorUnfolder(basis_fourier, [omega_fourier], "EmpiricalBayes", nothing, [1e-8], [10.], [0.3])
-    @test @returntrue model_cubic_spline = GaussErrorUnfolder(basis_cubic_spline, [omega_cubic_spline], "User", [0.3])
-    @test @returntrue model_legendre = GaussErrorUnfolder(basis_legendre, [omega_legendre], "EmpiricalBayes", [1.], [1e-8], [10.], [0.3])
-    @test @returntrue model_bernstein = GaussErrorUnfolder(basis_bernstein, [omega_bernstein], "EmpiricalBayes", nothing, [1e-8], [10.], [0.3])
+    @test @returntrue model_fourier = GaussErrorUnfolder(basis_fourier, [omega_fourier], "EmpiricalBayes", alphas=nothing, lower=[1e-8], higher=[10.], initial=[0.3])
+    @test @returntrue model_cubic_spline = GaussErrorUnfolder(basis_cubic_spline, [omega_cubic_spline], "User", alphas=[0.3])
+    @test @returntrue model_legendre = GaussErrorUnfolder(basis_legendre, [omega_legendre], "EmpiricalBayes", alphas=[1.], lower=[1e-8], higher=[10.], initial=[0.3])
+    @test @returntrue model_bernstein = GaussErrorUnfolder(basis_bernstein, [omega_bernstein], "EmpiricalBayes", lower=[1e-8], higher=[10.], initial=[0.3])
 
     @test @returntrue phi_reconstruct_fourier = solve(model_fourier, my_kernel, f, sig, y)
     @test @returntrue phi_reconstruct_cubic_spline = solve(model_cubic_spline, getOpticsKernels("heaviside"), f, sig, y)
     @test @returntrue phi_reconstruct_legendre = solve(model_legendre, getOpticsKernels("rectangular"), f, sig, y)
     @test @returntrue phi_reconstruct_bernstein = solve(model_bernstein, getOpticsKernels("triangular"), f, sig, y)
 
-    @test @returntrue model_fourier_matrix = GaussErrorMatrixUnfolder([omega_fourier], "EmpiricalBayes", nothing, [1e-8], [10.], [0.3])
-    @test @returntrue model_cubic_spline_matrix = GaussErrorMatrixUnfolder([omega_cubic_spline], "User", [0.3])
-    @test @returntrue model_legendre_matrix = GaussErrorMatrixUnfolder([omega_legendre], "EmpiricalBayes", [1.], [1e-8], [10.], [0.3])
-    @test @returntrue model_bernstein_matrix = GaussErrorMatrixUnfolder([omega_bernstein], "EmpiricalBayes", nothing, [1e-8], [10.], [0.3])
+    @test @returntrue model_fourier_matrix = GaussErrorMatrixUnfolder([omega_fourier], "EmpiricalBayes", alphas=nothing, lower=[1e-8], higher=[10.], initial=[0.3])
+    @test @returntrue model_cubic_spline_matrix = GaussErrorMatrixUnfolder([omega_cubic_spline], "User", alphas=[0.3])
+    @test @returntrue model_legendre_matrix = GaussErrorMatrixUnfolder([omega_legendre], "EmpiricalBayes", alphas=[1.], lower=[1e-8], higher=[10.], initial=[0.3])
+    @test @returntrue model_bernstein_matrix = GaussErrorMatrixUnfolder([omega_bernstein], "EmpiricalBayes", lower=[1e-8], higher=[10.], initial=[0.3])
 
     @test @returntrue phi_reconstruct_fourier_matrix = solve(model_fourier_matrix, discretize_kernel(basis_fourier, my_kernel, y), f, sig)
     @test @returntrue phi_reconstruct_cubic_spline_matrix = solve(model_cubic_spline_matrix, discretize_kernel(basis_cubic_spline, getOpticsKernels("heaviside"), y), f, sig)
@@ -178,43 +183,43 @@ end
 
 @testset "MCMC" begin
 
-    @test @returntrue model_cubic_spline1 = MCMCUnfolder(basis_cubic_spline, [omega_cubic_spline], "EmpiricalBayes", nothing, [1e-8], [10.], [0.3])
-    @test @returntrue model_cubic_spline2 = MCMCUnfolder(basis_cubic_spline, [omega_cubic_spline], "User", [0.3])
-    @test @returntrue model_cubic_spline3 = MCMCUnfolder(basis_cubic_spline, [omega_cubic_spline], "EmpiricalBayes", [1.], [1e-8], [10.], [0.3])
-    @test @returntrue model_cubic_spline4 = MCMCUnfolder(basis_cubic_spline, [omega_cubic_spline], "EmpiricalBayes", nothing, [1e-8], [10.], [0.3])
+    @test @returntrue model_cubic_spline1 = MCMCUnfolder(basis_cubic_spline, [omega_cubic_spline], "EmpiricalBayes",  alphas=nothing, lower=[1e-8], higher=[10.], initial=[0.3])
+    @test @returntrue model_cubic_spline2 = MCMCUnfolder(basis_cubic_spline, [omega_cubic_spline], "User", alphas=[0.3])
+    @test @returntrue model_cubic_spline3 = MCMCUnfolder(basis_cubic_spline, [omega_cubic_spline], "EmpiricalBayes", alphas=[1.], lower=[1e-8], higher=[10.], initial=[0.3])
+    @test @returntrue model_cubic_spline4 = MCMCUnfolder(basis_cubic_spline, [omega_cubic_spline], "EmpiricalBayes", lower=[1e-8], higher=[10.], initial=[0.3])
 
-    @test @returntrue model_1, line1, inits1, samples1, burnin1, thin1, chains1 = solve(model_cubic_spline1, my_kernel, f, sig, y)
-    @test @returntrue model_2, line2, inits2, samples2, burnin2, thin2, chains2 = solve(model_cubic_spline2, getOpticsKernels("heaviside"), f, sig, y)
-    @test @returntrue model_3, line3, inits3, samples3, burnin3, thin3, chains3 = solve(model_cubic_spline3, getOpticsKernels("rectangular"), f, sig, y)
-    @test @returntrue model_4, line4, inits4, samples4, burnin4, thin4, chains4 = solve(model_cubic_spline4, getOpticsKernels("triangular"), f, sig, y)
+    @test @returntrue model1_1, model1_2 = solve(model_cubic_spline1, my_kernel, f, sig, y)
+    @test @returntrue model2_1, model2_2  = solve(model_cubic_spline2, getOpticsKernels("heaviside"), f, sig, y, samples=10)
+    @test @returntrue model3_1, model3_2  = solve(model_cubic_spline3, getOpticsKernels("rectangular"), f, sig, y, samples=10)
+    @test @returntrue model4_1, model4_2  = solve(model_cubic_spline4, getOpticsKernels("triangular"), f, sig, y, samples=10)
 
-    @test @returntrue sim1 = mcmc(model_1, line1, inits1, 300, burnin=burnin1, thin=thin1, chains=chains1)
-    @test @returntrue res1 = get_values(sim1, chains1, length(basis_cubic_spline))
-    @test @returntrue sim2 = mcmc(model_2, line2, inits2, 300, burnin=burnin2, thin=thin2, chains=chains2)
-    @test @returntrue res2 = get_values(sim2, chains2, length(basis_cubic_spline))
-    @test @returntrue sim3 = mcmc(model_3, line3, inits3, 300, burnin=burnin3, thin=thin3, chains=chains3)
-    @test @returntrue res3 = get_values(sim3, chains3, length(basis_cubic_spline))
-    @test @returntrue sim4 = mcmc(model_4, line4, inits4, 300, burnin=burnin4, thin=thin4, chains=chains4)
-    @test @returntrue res4 = get_values(sim4, chains4, length(basis_cubic_spline))
+    @test @returntrue sim1 = mcmc(model1_1...; model1_2...)
+    @test @returntrue res1 = get_values(sim1)
+    @test @returntrue sim2 = mcmc(model2_1...; model2_2...)
+    @test @returntrue res2 = get_values(sim2)
+    @test @returntrue sim3 = mcmc(model3_1...; model3_2...)
+    @test @returntrue res3 = get_values(sim3)
+    @test @returntrue sim4 = mcmc(model4_1...; model4_2...)
+    @test @returntrue res4 = get_values(sim4)
 
-    @test @returntrue model_cubic_spline1_matrix = MCMCMatrixUnfolder([omega_cubic_spline], "EmpiricalBayes", nothing, [1e-8], [10.], [0.3])
-    @test @returntrue model_cubic_spline2_matrix = MCMCMatrixUnfolder([omega_cubic_spline], "User", [0.3])
-    @test @returntrue model_cubic_spline3_matrix = MCMCMatrixUnfolder([omega_cubic_spline], "EmpiricalBayes", [1.], [1e-8], [10.], [0.3])
-    @test @returntrue model_cubic_spline4_matrix = MCMCMatrixUnfolder([omega_cubic_spline], "EmpiricalBayes", nothing, [1e-8], [10.], [0.3])
+    @test @returntrue model_cubic_spline1_matrix = MCMCMatrixUnfolder([omega_cubic_spline], "EmpiricalBayes",  alphas=nothing, lower=[1e-8], higher=[10.], initial=[0.3])
+    @test @returntrue model_cubic_spline2_matrix = MCMCMatrixUnfolder([omega_cubic_spline], "User", alphas=[0.3])
+    @test @returntrue model_cubic_spline3_matrix = MCMCMatrixUnfolder([omega_cubic_spline], "EmpiricalBayes", alphas=[1.], lower=[1e-8], higher=[10.], initial=[0.3])
+    @test @returntrue model_cubic_spline4_matrix = MCMCMatrixUnfolder([omega_cubic_spline], "EmpiricalBayes", lower=[1e-8], higher=[10.], initial=[0.3])
+    #
+    @test @returntrue model1_1, model1_2 = solve(model_cubic_spline1_matrix, discretize_kernel(basis_cubic_spline, my_kernel, y), f, sig, samples=10)
+    @test @returntrue model2_1, model2_2 = solve(model_cubic_spline2_matrix, discretize_kernel(basis_cubic_spline, getOpticsKernels("heaviside"), y), f, sig, samples=10)
+    @test @returntrue model3_1, model3_2 = solve(model_cubic_spline3_matrix, discretize_kernel(basis_cubic_spline, getOpticsKernels("rectangular"), y), f, sig, samples=10)
+    @test @returntrue model4_1, model4_2 = solve(model_cubic_spline4_matrix, discretize_kernel(basis_cubic_spline, getOpticsKernels("triangular"), y), f, sig, samples=10)
 
-    @test @returntrue model_1, line1, inits1, samples1, burnin1, thin1, chains1 = solve(model_cubic_spline1_matrix, discretize_kernel(basis_cubic_spline, my_kernel, y), f, sig)
-    @test @returntrue model_2, line2, inits2, samples2, burnin2, thin2, chains2 = solve(model_cubic_spline2_matrix, discretize_kernel(basis_cubic_spline, getOpticsKernels("heaviside"), y), f, sig)
-    @test @returntrue model_3, line3, inits3, samples3, burnin3, thin3, chains3 = solve(model_cubic_spline3_matrix, discretize_kernel(basis_cubic_spline, getOpticsKernels("rectangular"), y), f, sig)
-    @test @returntrue model_4, line4, inits4, samples4, burnin4, thin4, chains4 = solve(model_cubic_spline4_matrix, discretize_kernel(basis_cubic_spline, getOpticsKernels("triangular"), y), f, sig)
-
-    @test @returntrue sim1 = mcmc(model_1, line1, inits1, 300, burnin=burnin1, thin=thin1, chains=chains1)
-    @test @returntrue res1 = get_values(sim1, chains1, length(basis_cubic_spline))
-    @test @returntrue sim2 = mcmc(model_2, line2, inits2, 300, burnin=burnin2, thin=thin2, chains=chains2)
-    @test @returntrue res2 = get_values(sim2, chains2, length(basis_cubic_spline))
-    @test @returntrue sim3 = mcmc(model_3, line3, inits3, 300, burnin=burnin3, thin=thin3, chains=chains3)
-    @test @returntrue res3 = get_values(sim3, chains3, length(basis_cubic_spline))
-    @test @returntrue sim4 = mcmc(model_4, line4, inits4, 300, burnin=burnin4, thin=thin4, chains=chains4)
-    @test @returntrue res4 = get_values(sim4, chains4, length(basis_cubic_spline))
+    @test @returntrue sim1 = mcmc(model1_1...; model1_2...)
+    @test @returntrue res1 = get_values(sim1)
+    @test @returntrue sim2 = mcmc(model2_1...; model2_2...)
+    @test @returntrue res2 = get_values(sim2)
+    @test @returntrue sim3 = mcmc(model3_1...; model3_2...)
+    @test @returntrue res3 = get_values(sim3)
+    @test @returntrue sim4 = mcmc(model4_1...; model4_2...)
+    @test @returntrue res4 = get_values(sim4)
 end
 
 x = collect(range(a, stop=b, length=500))

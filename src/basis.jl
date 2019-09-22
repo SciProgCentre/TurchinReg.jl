@@ -152,6 +152,14 @@ CubicSplineBasis(
     boundary_condition::Union{Tuple{Union{String, Nothing}, Union{String, Nothing}}, Nothing, String}=nothing
     )
 ```
+
+```julia
+CubicSplineBasis(
+    a::Real, b::Real, n::Int,
+    boundary_condition::Union{Tuple{Union{String, Nothing}, Union{String, Nothing}}, Nothing, String}=nothing
+    )
+```
+
 `knots` -- knots of spline
 `boundary_condition` -- boundary conditions of basis functions. If tuple, the first element affects left bound, the second element affects right bound. If string, both sides are affected. Possible options: `"dirichlet"`, `nothing`
 
@@ -244,6 +252,13 @@ struct CubicSplineBasis <: Basis
             @info "Cubic spline basis is created."
             return new(knots[1], knots[end], knots, basis_functions)
         end
+    end
+
+    function CubicSplineBasis(
+        a::Real, b::Real, n::Int,
+        boundary_condition::Union{Tuple{Union{String, Nothing}, Union{String, Nothing}}, Nothing, String}=nothing
+        )
+        return CubicSplineBasis(collect(range(a, stop=b, length=n)), boundary_condition)
     end
 
 end
@@ -344,9 +359,6 @@ end
             a, b, rtol=config.RTOL_QUADGK,
             maxevals=config.MAXEVALS_QUADGK, order=config.ORDER_QUADGK
             )[1]
-            if omega[i, j] == 0 && i == j
-                @warn "Integral of squared derivative is 0, omega matrix will be singular"
-            end
             omega[j, i] = omega[i, j]
         end
     end

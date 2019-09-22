@@ -14,7 +14,7 @@ module StatReg
     include("gauss_error.jl")
     include("mcmc.jl")
 
-    export BaseFunction, Basis, omega, FourierBasis, CubicSplineBasis, LegendreBasis, BernsteinBasis
+    export BaseFunction, Basis, omega, FourierBasis, CubicSplineBasis, LegendreBasis, BernsteinBasis, discretize_kernel
     export GaussErrorMatrixUnfolder, solve, GaussErrorUnfolder
     export PhiVec, call, errors
     export config, Config
