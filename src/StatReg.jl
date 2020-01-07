@@ -7,13 +7,10 @@ module StatReg
     using Polynomials
     using PiecewisePolynomials
 
-    include("config.jl")
-    include("kernels.jl")
-    include("basis.jl")
-    include("vector.jl")
-    include("check.jl")
-    include("gauss_error.jl")
-    include("mcmc.jl")
+    include("./utils/utils.jl")
+    include("./bases/bases.jl")
+    include("./solution_utils/solution_utils.jl")
+    include("./solvers/solvers.jl")
 
     export BaseFunction, Basis, omega, FourierBasis, CubicSplineBasis, LegendreBasis, BernsteinBasis, discretize_kernel
     export GaussErrorMatrixUnfolder, solve, GaussErrorUnfolder

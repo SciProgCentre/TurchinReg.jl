@@ -1,0 +1,6 @@
+include("b_spline_implementation.jl")
+include("utils.jl")
+include("fourier.jl")
+include("legendre.jl")
+include("cubic_spline.jl")
+include("bernstein.jl")
