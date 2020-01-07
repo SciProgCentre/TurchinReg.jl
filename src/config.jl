@@ -4,7 +4,7 @@ mutable struct Config
     X_TOL_OPTIM::Real# = 1e-8
     ORDER_QUADGK::Int# = 500
 
-    Config() = new(1e-8, 1e5, 1e-8, 500)
+    Config() = new(1e-5, 1e3, 1e-5, 500)
 end
 
 config = Config()
