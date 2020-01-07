@@ -1,16 +1,24 @@
 include("../src/StatReg.jl")
 using .StatReg
 
-include("../src/utils.jl")
 include("../src/config.jl")
 include("../src/b_spline_implementation.jl")
 include("../src/check.jl")
-include("../src/piecewise_polynomials.jl")
 
 
-using Test, QuadGK, Random, Distributions, Polynomials, Mamba
+using Test, QuadGK, Random, Distributions, Polynomials, Mamba, PiecewisePolynomials
 
 Random.seed!(1234)
+
+macro returntrue(f::Expr)
+    try
+        eval(f)
+    catch e
+        print(e)
+        return false
+    end
+    return true
+endv
 
 a = 0
 b = 6.
@@ -39,7 +47,7 @@ end
     @test @returntrue b_spline.func(3)
     @test @returntrue b_spline.func(4.)
     @test @returntrue der(b_spline.func)(3)
-    @test @returntrue der(der(b_spline.func)) == der_order(b_spline.func, 2)
+    @test @returntrue der(der(b_spline.func)) == PiecewisePolynomials.derivative(b_spline.func, order=2)
     @test @returntrue b_spline(3)
     @test @returntrue b_spline(2.)
 end

@@ -5,6 +5,7 @@ module StatReg
     using Mamba
     using Logging
     using Polynomials
+    using PiecewisePolynomials
 
     include("config.jl")
     include("kernels.jl")

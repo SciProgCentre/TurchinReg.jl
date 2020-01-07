@@ -4,8 +4,6 @@ make_sym(A::AbstractMatrix{<:Real}) = (transpose(A) + A) / 2
 """
 Model for discrete data and kernel.
 
-
-
 ```julia
 GaussErrorMatrixUnfolder(
     omegas::Array{Array{T, 2}, 1} where T<:Real,

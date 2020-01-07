@@ -275,8 +275,8 @@ end
         for j = i:n
             segment_a = max(basis.basis_functions[i].support[1], basis.basis_functions[j].support[1])
             segment_b = min(basis.basis_functions[i].support[2], basis.basis_functions[j].support[2])
-            omega[i, j] = int(
-                der_order(basis.basis_functions[i].f.func, order) * der_order(basis.basis_functions[j].f.func, order),
+            omega[i, j] = integral(
+                PiecewisePolynomials.derivative(basis.basis_functions[i].f.func, order=order) * PiecewisePolynomials.derivative(basis.basis_functions[j].f.func, order=order),
                 segment_a, segment_b
                 )
             omega[j, i] = omega[i, j]

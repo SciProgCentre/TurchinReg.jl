@@ -1,10 +1,10 @@
-include("piecewise_polynomials.jl")
+using PiecewisePolynomials
 
 struct BSpline
     i::Int
     k::Int
     knots::AbstractVector{<:Real}
-    func::SegmentPiecewisePoly
+    func::PiecewisePoly
 
     function BSpline(i::Int, k::Int, knots::AbstractVector{<:Real})
         if i < 0
@@ -20,20 +20,20 @@ struct BSpline
             if  k == 0
                 polys = [Poly([0]) for i in range(1, stop=length(knots)-1)]
                 polys[i + 1] = Poly([1])
-                return SegmentPiecewisePoly(polys, knots)
+                return PiecewisePoly(polys, knots)
             end
 
-            first = SegmentPiecewisePoly([Poly([0])], [knots[1], knots[end]])
-            second = SegmentPiecewisePoly([Poly([0])], [knots[1], knots[end]])
+            first = PiecewisePoly([Poly([0])], [knots[1], knots[end]])
+            second = PiecewisePoly([Poly([0])], [knots[1], knots[end]])
             if !isapprox(abs(knots[i+k+1]-knots[i+1]) + 1, 1)
-                first = SegmentPiecewisePoly(
+                first = PiecewisePoly(
                     [Poly([-knots[i+1]/(knots[i+k+1]-knots[i+1]), 1/(knots[i+k+1]-knots[i+1])])],
                     [knots[1], knots[end]]
                     ) * b_spline_function(i, k-1, knots)
             end
 
             if !isapprox(abs(knots[i+k+1+1]-knots[i+1+1]) + 1, 1)
-                second = SegmentPiecewisePoly(
+                second = PiecewisePoly(
                 [Poly([knots[i+k+1+1]/(knots[i+k+1+1]-knots[i+1+1]), -1/(knots[i+k+1+1]-knots[i+1+1])])],
                 [knots[1], knots[end]]
                 ) * b_spline_function(i+1, k-1, knots)
