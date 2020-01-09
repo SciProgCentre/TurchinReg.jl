@@ -1,6 +1,3 @@
-make_sym(A::AbstractMatrix{<:Real}) = (transpose(A) + A) / 2
-
-
 """
 Model for discrete data and kernel.
 
@@ -14,6 +11,7 @@ GaussErrorMatrixUnfolder(
     initial::Union{AbstractVector{<:Real}, Nothing}=nothing
     )
 ```
+
 `omegas` -- array of matrices that provide information about basis functions
 
 `method` -- constant selection method, possible options: "EmpiricalBayes" and "User"
@@ -53,9 +51,9 @@ mutable struct GaussErrorMatrixUnfolder
         higher::Union{AbstractVector{<:Real}, Nothing}=nothing,
         initial::Union{AbstractVector{<:Real}, Nothing}=nothing
         )
-        m = check_args(omegas, method, alphas, lower, higher, initial)
+        n = check_args(omegas, method, alphas, lower, higher, initial)
         @info "GaussErrorMatrixUnfolder is created"
-        return new(omegas, m, method, alphas, lower, higher, initial)
+        return new(omegas, n, method, alphas, lower, higher, initial)
     end
 end
 

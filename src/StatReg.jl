@@ -6,6 +6,7 @@ module StatReg
     using Logging
     using Polynomials
     using PiecewisePolynomials
+    using BAT, ValueShapes
 
     include("./utils/utils.jl")
     include("./bases/bases.jl")
@@ -13,7 +14,7 @@ module StatReg
     include("./solvers/solvers.jl")
 
     export BaseFunction, Basis, omega, FourierBasis, CubicSplineBasis, LegendreBasis, BernsteinBasis, discretize_kernel
-    export GaussErrorMatrixUnfolder, solve, GaussErrorUnfolder
+    export GaussErrorMatrixUnfolder, solve, GaussErrorUnfolder, simple_solver
     export PhiVec, call, errors
     export config, Config
     export MCMCMatrixUnfolder, MCMCUnfolder, get_values

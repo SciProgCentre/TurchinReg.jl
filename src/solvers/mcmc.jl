@@ -126,7 +126,7 @@ function solve(
         )
 end
 
-function solve_MCMC(
+function solve_MCMC_old(
     unfolder::MCMCMatrixUnfolder,
     kernel::AbstractMatrix{<:Real},
     data::AbstractVector{<:Real},
@@ -181,8 +181,51 @@ function solve_MCMC(
 end
 
 
+function solve_MCMC(
+    unfolder::MCMCMatrixUnfolder,
+    kernel::AbstractMatrix{<:Real},
+    data::AbstractVector{<:Real},
+    data_errors::AbstractMatrix{<:Real},
+    model::Union{Function, String} = "Gaussian",
+    samples::Int = 10 * 1000,
+    burnin::Int = 0,
+    thin::Int = 1,
+    chains::Int = 1,
+    verbose::Bool = false
+    )
+    @info "Starting solve_MCMC..."
+
+    sig = transpose(unfolder.alphas) * unfolder.omegas
+    sig_inv = make_sym(pinv(sig))
+    likelihood = phi -> begin
+            mu = kernel * phi.phi
+            return LinDVal(exp(-1/2 * transpose(data - mu) * make_sym(pinv(data_errors)) * (data - mu)))
+        end
+
+    if typeof(model) == String
+        if model != "Gaussian"
+            @error "Unknown model name."
+            Base.error("Unknown model name.")
+        end
+        model = likelihood
+    end
+
+    val = det(transpose(unfolder.alphas) * unfolder.omegas)+1
+    if isapprox(val, 1)
+        @error "Sigma matrix is singular."
+        Base.error("Sigma matrix is singular.")
+    end
+    prior = NamedTupleDist(phi = MvNormal(zeros(unfolder.n), sig_inv))
+    posterior = PosteriorDensity(likelihood, prior)
+    samples = bat_sample(posterior, (samples, chains), MetropolisHastings()).result;
+    samples_mode = mode(samples).phi
+    samples_cov = cov(unshaped.(samples))
+    return (samples_mode, samples_cov)
+end
+
+
 """
-Allowers to get coefficients and errors from generated data set.
+Allows to get coefficients and errors from generated data set.
 
 ```julia
 get_values(sim::ModelChains)
