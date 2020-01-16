@@ -151,7 +151,7 @@ function solve_MCMC(
             )
     end
 
-    scheme = [NUTS([:phi])]
+    scheme = [AMM([:phi], 1 * Matrix{Float64}(I, unfolder.n, unfolder.n))]
     val = det(transpose(unfolder.alphas) * unfolder.omegas)+1
     if isapprox(val, 1)
         @error "Sigma matrix is singular."
