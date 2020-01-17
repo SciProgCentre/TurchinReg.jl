@@ -95,7 +95,8 @@ function solve(
     kernel::AbstractMatrix{<:Real},
     data::AbstractVector{<:Real},
     data_errors::AbstractVecOrMat{<:Real};
-    model::Union{Model, String} = "Gaussian",
+    # model::Union{Model, String} = "Gaussian",
+    model::String = "Gaussian",
     samples::Int = 10 * 1000,
     burnin::Int = 0,
     thin::Int = 1,
@@ -126,59 +127,60 @@ function solve(
         )
 end
 
-function solve_MCMC_old(
-    unfolder::MCMCMatrixUnfolder,
-    kernel::AbstractMatrix{<:Real},
-    data::AbstractVector{<:Real},
-    data_errors::AbstractMatrix{<:Real},
-    model::Union{Model, String} = "Gaussian",
-    samples::Int = 10 * 1000,
-    burnin::Int = 0,
-    thin::Int = 1,
-    chains::Int = 1,
-    verbose::Bool = false
-    )
-    @info "Starting solve_MCMC..."
-    if typeof(model) == String
-        if model != "Gaussian"
-            @error "Unknown model name."
-            Base.error("Unknown model name.")
-        end
-        model = Model(
-            phi = Stochastic(1, (n, sigma) ->  MvNormal(zeros(n), sigma)),
-            mu = Logical(1, (kernel, phi) -> kernel * phi, false),
-            f = Stochastic(1, (mu, data_errors) ->  MvNormal(mu, data_errors), false),
-            )
-    end
-
-    scheme = [NUTS([:phi])]
-    val = det(transpose(unfolder.alphas) * unfolder.omegas)+1
-    if isapprox(val, 1)
-        @error "Sigma matrix is singular."
-        Base.error("Sigma matrix is singular.")
-    end
-
-    line = Dict{Symbol, Any}(
-        :f => data,
-        :kernel => kernel,
-        :data_errors => data_errors,
-        :n => unfolder.n,
-        :sigma => make_sym(pinv(transpose(unfolder.alphas) * unfolder.omegas)),
-        )
-
-    inits = [Dict{Symbol, Any}(
-            :phi => rand(Normal(0, 1), unfolder.n),
-            :f => data
-            ) for i in 1:chains]
-
-    setsamplers!(model, scheme)
-    @info "Ending solve_MCMC..."
-    return (model, line, inits, samples), (
-        :burnin => burnin,
-        :thin => thin,
-        :chains => chains,
-        :verbose => verbose)
-end
+# function solve_MCMC_old(
+#     unfolder::MCMCMatrixUnfolder,
+#     kernel::AbstractMatrix{<:Real},
+#     data::AbstractVector{<:Real},
+#     data_errors::AbstractMatrix{<:Real},
+#     # model::Union{Model, String} = "Gaussian",
+#     model::String = "Gaussian",
+#     samples::Int = 10 * 1000,
+#     burnin::Int = 0,
+#     thin::Int = 1,
+#     chains::Int = 1,
+#     verbose::Bool = false
+#     )
+#     @info "Starting solve_MCMC..."
+#     if typeof(model) == String
+#         if model != "Gaussian"
+#             @error "Unknown model name."
+#             Base.error("Unknown model name.")
+#         end
+#         model = Model(
+#             phi = Stochastic(1, (n, sigma) ->  MvNormal(zeros(n), sigma)),
+#             mu = Logical(1, (kernel, phi) -> kernel * phi, false),
+#             f = Stochastic(1, (mu, data_errors) ->  MvNormal(mu, data_errors), false),
+#             )
+#     end
+#
+#     scheme = [NUTS([:phi])]
+#     val = det(transpose(unfolder.alphas) * unfolder.omegas)+1
+#     if isapprox(val, 1)
+#         @error "Sigma matrix is singular."
+#         Base.error("Sigma matrix is singular.")
+#     end
+#
+#     line = Dict{Symbol, Any}(
+#         :f => data,
+#         :kernel => kernel,
+#         :data_errors => data_errors,
+#         :n => unfolder.n,
+#         :sigma => make_sym(pinv(transpose(unfolder.alphas) * unfolder.omegas)),
+#         )
+#
+#     inits = [Dict{Symbol, Any}(
+#             :phi => rand(Normal(0, 1), unfolder.n),
+#             :f => data
+#             ) for i in 1:chains]
+#
+#     setsamplers!(model, scheme)
+#     @info "Ending solve_MCMC..."
+#     return (model, line, inits, samples), (
+#         :burnin => burnin,
+#         :thin => thin,
+#         :chains => chains,
+#         :verbose => verbose)
+# end
 
 
 function solve_MCMC(
@@ -197,10 +199,13 @@ function solve_MCMC(
 
     sig = transpose(unfolder.alphas) * unfolder.omegas
     sig_inv = make_sym(pinv(sig))
-    likelihood = phi -> begin
-            mu = kernel * phi.phi
-            return LinDVal(exp(-1/2 * transpose(data - mu) * make_sym(pinv(data_errors)) * (data - mu)))
+
+    likelihood = let kernel=kernel, data_errors=data_errors, data=data
+        phi -> begin
+            mu = kernel * phi
+            return exp(-1/2 * transpose(data - mu) * make_sym(pinv(data_errors)) * (data - mu))
         end
+    end
 
     if typeof(model) == String
         if model != "Gaussian"
@@ -215,44 +220,74 @@ function solve_MCMC(
         @error "Sigma matrix is singular."
         Base.error("Sigma matrix is singular.")
     end
-    prior = NamedTupleDist(phi = MvNormal(zeros(unfolder.n), sig_inv))
-    posterior = PosteriorDensity(likelihood, prior)
-    samples = bat_sample(posterior, (samples, chains), MetropolisHastings()).result;
-    samples_mode = mode(samples).phi
-    samples_cov = cov(unshaped.(samples))
-    return (samples_mode, samples_cov)
-end
+    # prior = NamedTupleDist(phi = MvNormal(zeros(unfolder.n), sig_inv))
+    # posterior = PosteriorDensity(likelihood, prior)
+    # samples = bat_sample(posterior, (samples, chains), MetropolisHastings()).result;
+    # samples_mode = mode(samples).phi
+    # samples_cov = cov(unshaped.(samples))
+    # return (samples_mode, samples_cov)
 
+    # prior = let unfolder=unfolder, sig_inv=sig_inv
+    #     phi -> begin
+    #         mu = zeros(unfolder.n)
+    #         return exp(-1/2 * transpose(phi - mu) * sig_inv * (phi - mu))
+    #     end
+    # end
 
-"""
-Allows to get coefficients and errors from generated data set.
-
-```julia
-get_values(sim::ModelChains)
-```
-
-**Arguments**
-* `sim` -- data generated by `mcmc()`
-
-**Returns:** `Dict{String, AbstractVector{Real}}` with coefficients ("coeff") and errors ("errors").
-
-"""
-function get_values(sim::ModelChains)
-    shape = size(sim.value)
-    chains = shape[3]
-    n = shape[2]
-    values = [sim.value[:, :, j] for j in range(1, stop=chains)]
-    res =  mean(values)
-    coeff = []
-    cov_ = cov(res)
-    for i in range(1, stop=n)
-        append!(coeff, mean(res[:, i]))
+    # posterior = let model=model, prior=prior
+    #     phi -> log(model(phi) * prior(phi))
+    # end
+    posterior = let unfolder=unfolder, kernel=kernel, data=data, data_errors=data_errors
+        phi -> begin
+            mu = zeros(unfolder.n)
+            prior_log = -1/2 * transpose(phi - mu) * sig_inv * (phi - mu)
+            mu_ = kernel * phi
+            likelihood_log = -1/2 * transpose(data - mu_) * make_sym(pinv(data_errors)) * (data - mu_)
+            return prior_log + likelihood_log
+        end
     end
-    return Dict(
-        "coeff" => convert(AbstractVector{Real}, coeff),
-        "errors" => cov(res),
-        )
+
+    metric = DiagEuclideanMetric(unfolder.n)
+    hamiltonian = Hamiltonian(metric, posterior, ForwardDiff)
+    initial_ϵ = find_good_eps(hamiltonian, zeros(unfolder.n))
+    integrator = Leapfrog(initial_ϵ)
+    proposal = NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator)
+    adaptor = StanHMCAdaptor(Preconditioner(metric), NesterovDualAveraging(0.8, integrator))
+    n_adapts = 100
+    return AdvancedHMC.sample(hamiltonian, proposal, zeros(unfolder.n), samples, adaptor, n_adapts; progress=false)
+
 end
+
+
+# """
+# Allows to get coefficients and errors from generated data set.
+#
+# ```julia
+# get_values(sim::ModelChains)
+# ```
+#
+# **Arguments**
+# * `sim` -- data generated by `mcmc()`
+#
+# **Returns:** `Dict{String, AbstractVector{Real}}` with coefficients ("coeff") and errors ("errors").
+#
+# """
+# function get_values(sim::ModelChains)
+#     shape = size(sim.value)
+#     chains = shape[3]
+#     n = shape[2]
+#     values = [sim.value[:, :, j] for j in range(1, stop=chains)]
+#     res =  mean(values)
+#     coeff = []
+#     cov_ = cov(res)
+#     for i in range(1, stop=n)
+#         append!(coeff, mean(res[:, i]))
+#     end
+#     return Dict(
+#         "coeff" => convert(AbstractVector{Real}, coeff),
+#         "errors" => cov(res),
+#         )
+# end
 
 
 """
@@ -344,7 +379,8 @@ function solve(
     data::Union{Function, AbstractVector{<:Real}},
     data_errors::Union{Function, AbstractVector{<:Real}},
     y::Union{AbstractVector{<:Real}, Nothing}=nothing;
-    model::Union{Model, String} = "Gaussian",
+    # model::Union{Model, String} = "Gaussian",
+    model::String = "Gaussian",
     samples::Int = 10 * 1000,
     burnin::Int = 0,
     thin::Int = 1,

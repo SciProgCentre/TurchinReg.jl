@@ -80,6 +80,7 @@ function find_optimal_alpha(
     nchains = 4
     samples = bat_sample(posterior, (nsamples, nchains), MetropolisHastings()).result;
     samples_mode = mode(samples).alpha
+    println("alphas = ", samples_mode)
     return samples_mode
 
     #TODO:: find appropriate algo

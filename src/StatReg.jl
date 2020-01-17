@@ -2,11 +2,12 @@ module StatReg
 
     using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
     using Optim
-    using Mamba
+    # using Mamba
     using Logging
     using Polynomials
     using PiecewisePolynomials
     using BAT, ValueShapes
+    using AdvancedHMC, Distributions, ForwardDiff
 
     include("./utils/utils.jl")
     include("./bases/bases.jl")
