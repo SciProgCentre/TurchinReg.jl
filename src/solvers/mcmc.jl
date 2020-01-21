@@ -181,7 +181,23 @@ end
 #         :chains => chains,
 #         :verbose => verbose)
 # end
+struct TurchinProblem
+    data::Vector
+    data_errors::Matrix
+    kernel::Matrix
+    D::Int
+    sig_inv::Matrix
+end
 
+function (problem::TurchinProblem)(θ)
+    @unpack phi = θ
+    @unpack data, data_errors, kernel, D, sig_inv = problem
+    mu = zeros(D)
+    prior_log = -1/2 * transpose(phi - mu) * sig_inv * (phi - mu)
+    mu_ = kernel * phi
+    likelihood_log = -1/2 * transpose(data - mu_) * make_sym(pinv(data_errors)) * (data - mu_)
+    return prior_log + likelihood_log
+end
 
 function solve_MCMC(
     unfolder::MCMCMatrixUnfolder,
@@ -200,20 +216,20 @@ function solve_MCMC(
     sig = transpose(unfolder.alphas) * unfolder.omegas
     sig_inv = make_sym(pinv(sig))
 
-    likelihood = let kernel=kernel, data_errors=data_errors, data=data
-        phi -> begin
-            mu = kernel * phi
-            return exp(-1/2 * transpose(data - mu) * make_sym(pinv(data_errors)) * (data - mu))
-        end
-    end
+    # likelihood = let kernel=kernel, data_errors=data_errors, data=data
+    #     phi -> begin
+    #         mu = kernel * phi
+    #         return exp(-1/2 * transpose(data - mu) * make_sym(pinv(data_errors)) * (data - mu))
+    #     end
+    # end
 
-    if typeof(model) == String
-        if model != "Gaussian"
-            @error "Unknown model name."
-            Base.error("Unknown model name.")
-        end
-        model = likelihood
-    end
+    # if typeof(model) == String
+    #     if model != "Gaussian"
+    #         @error "Unknown model name."
+    #         Base.error("Unknown model name.")
+    #     end
+    #     model = likelihood
+    # end
 
     val = det(transpose(unfolder.alphas) * unfolder.omegas)+1
     if isapprox(val, 1)
@@ -227,34 +243,46 @@ function solve_MCMC(
     # samples_cov = cov(unshaped.(samples))
     # return (samples_mode, samples_cov)
 
-    # prior = let unfolder=unfolder, sig_inv=sig_inv
+    # posterior = let unfolder=unfolder, kernel=kernel, data=data, data_errors=data_errors
     #     phi -> begin
     #         mu = zeros(unfolder.n)
-    #         return exp(-1/2 * transpose(phi - mu) * sig_inv * (phi - mu))
+    #         prior_log = -1/2 * transpose(phi - mu) * sig_inv * (phi - mu)
+    #         mu_ = kernel * phi
+    #         likelihood_log = -1/2 * transpose(data - mu_) * make_sym(pinv(data_errors)) * (data - mu_)
+    #         return prior_log + likelihood_log
     #     end
     # end
+    #
+    # metric = DiagEuclideanMetric(unfolder.n)
+    # hamiltonian = Hamiltonian(metric, posterior, ForwardDiff)
+    # initial_ϵ = find_good_eps(hamiltonian, zeros(unfolder.n))
+    # integrator = Leapfrog(initial_ϵ)
+    # proposal = NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator)
+    # adaptor = StanHMCAdaptor(Preconditioner(metric), NesterovDualAveraging(0.8, integrator))
+    # n_adapts = 100
+    # return AdvancedHMC.sample(hamiltonian, proposal, zeros(unfolder.n), samples, adaptor, n_adapts; progress=false)
+    @info "Starting sampling..."
 
-    # posterior = let model=model, prior=prior
-    #     phi -> log(model(phi) * prior(phi))
-    # end
-    posterior = let unfolder=unfolder, kernel=kernel, data=data, data_errors=data_errors
-        phi -> begin
-            mu = zeros(unfolder.n)
-            prior_log = -1/2 * transpose(phi - mu) * sig_inv * (phi - mu)
-            mu_ = kernel * phi
-            likelihood_log = -1/2 * transpose(data - mu_) * make_sym(pinv(data_errors)) * (data - mu_)
-            return prior_log + likelihood_log
-        end
-    end
+    t = TurchinProblem(data, data_errors, kernel, unfolder.n, sig_inv)
 
-    metric = DiagEuclideanMetric(unfolder.n)
-    hamiltonian = Hamiltonian(metric, posterior, ForwardDiff)
-    initial_ϵ = find_good_eps(hamiltonian, zeros(unfolder.n))
-    integrator = Leapfrog(initial_ϵ)
-    proposal = NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator)
-    adaptor = StanHMCAdaptor(Preconditioner(metric), NesterovDualAveraging(0.8, integrator))
-    n_adapts = 100
-    return AdvancedHMC.sample(hamiltonian, proposal, zeros(unfolder.n), samples, adaptor, n_adapts; progress=false)
+    @info "Sampling1"
+
+    transT = as((phi = as(Array, asℝ, unfolder.n),))
+    @info "Sampling1.1"
+    T = TransformedLogDensity(transT, t)
+    @info "Sampling1.2"
+    @time ∇T = ADgradient(:ForwardDiff, T)
+
+    @info "Sampling2"
+
+    results = mcmc_with_warmup(Random.GLOBAL_RNG, ∇T, samples; reporter = NoProgressReport())
+    posterior = TransformVariables.transform.(transT, results.chain)
+
+    @info "Sampling3"
+
+    coeff = [mean([posterior[j].phi[i] for j in range(1, stop=samples)]) for i in range(1, stop=unfolder.n)]
+    errors = [cov([posterior[j].phi[i] for j in range(1, stop=samples)]) for i in range(1, stop=unfolder.n)]
+    return coeff, errors
 
 end
 
