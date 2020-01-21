@@ -1,4 +1,5 @@
 make_sym(A::AbstractMatrix{<:Real}) = (transpose(A) + A) / 2
+save_inv(A::AbstractMatrix{<:Real}) = make_sym(pinv(A))
 
 function find_optimal_alpha_old(
     omegas::Array{Array{T, 2}, 1} where T<:Real,
@@ -18,7 +19,7 @@ function find_optimal_alpha_old(
         end
         a0 = transpose(a) * omegas
         Ba0 = B + a0
-        iBa0 = make_sym(pinv(Ba0))
+        iBa0 = save_inv(Ba0)
         dotp = transpose(b) * iBa0 * b
 
         function det_(A::Array{<:Real, 2})
@@ -66,8 +67,8 @@ function find_optimal_alpha(
     likelihood = alpha -> begin
             a0 = transpose(alpha.alpha) * omegas
             Ba0 = B + a0
-            iBa0 = make_sym(pinv(Ba0))
-            iB = make_sym(pinv(B))
+            iBa0 = save_inv(Ba0)
+            iB = save_inv(B)
             dotp = transpose(b) * iBa0 * b
             dotp2 = transpose(b) * iB * b
 
@@ -75,11 +76,11 @@ function find_optimal_alpha(
         end
 
     prior = NamedTupleDist(alpha = [low[i]..high[i] for i in eachindex(low)])
-    posterior = PosteriorDensity(likelihood, prior)
+    posterior = BAT.PosteriorDensity(likelihood, prior)
     nsamples = 10^4
     nchains = 4
-    samples = bat_sample(posterior, (nsamples, nchains), MetropolisHastings()).result;
-    samples_mode = mode(samples).alpha
+    samples = BAT.bat_sample(posterior, (nsamples, nchains), MetropolisHastings()).result;
+    samples_mode = BAT.mode(samples).alpha
     return samples_mode
 
     #TODO:: find appropriate algo

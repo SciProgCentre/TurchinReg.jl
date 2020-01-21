@@ -84,7 +84,7 @@ function solve(
     )
     @info "Starting solve..."
     data_errors = check_args(unfolder, kernel, data, data_errors)
-    data_errorsInv = make_sym(pinv(data_errors))
+    data_errorsInv = save_inv(data_errors)
     B = make_sym(transpose(kernel) * data_errorsInv * kernel)
     b = transpose(kernel) * transpose(data_errorsInv) * data
     initial = unfolder.initial
@@ -98,7 +98,7 @@ function solve(
         Base.eror("Unknown method" + unfolder.method)
     end
     Ba0 = B + transpose(unfolder.alphas) * unfolder.omegas
-    iBa0 = make_sym(pinv(Ba0))
+    iBa0 = save_inv(Ba0)
     r = iBa0 * b
     @info "Ending solve..."
     return Dict("coeff" => r, "errors" => iBa0, "alphas" => unfolder.alphas)
