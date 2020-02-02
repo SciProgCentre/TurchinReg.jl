@@ -114,7 +114,7 @@ function solve(
         Base.eror("Unknown method: " + unfolder.method)
     end
     @info "Ending solve..."
-    return solve_MCMC(
+    return solve_MCMC_BAT(
         unfolder, kernel, data, data_errors,
         model, samples, chains, algorithm
         )

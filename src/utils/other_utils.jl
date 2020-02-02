@@ -1,7 +1,11 @@
+using Plots
+plotly()
+gr(size=(500,500), html_output_format=:png)
+
 make_sym(A::AbstractMatrix{<:Real}) = (transpose(A) + A) / 2
 save_inv(A::AbstractMatrix{<:Real}) = make_sym(pinv(A))
 
-function find_optimal_alpha_old(
+function find_optimal_alpha(
     omegas::Array{Array{T, 2}, 1} where T<:Real,
     B::AbstractMatrix{<:Real},
     b::AbstractVector{<:Real},
@@ -50,12 +54,15 @@ function find_optimal_alpha_old(
         return [0.05]
     end
     alphas = exp.(Optim.minimizer(res))
+    plot(a -> alpha_prob([a]))
+    display()
+    savefig("plot_prob.png")
     @info "Optimized successfully, alphas = $alphas."
     return alphas
 end
 
 
-function find_optimal_alpha(
+function find_optimal_alpha_BAT(
     omegas::Array{Array{T, 2}, 1} where T<:Real,
     B::AbstractMatrix{<:Real},
     b::AbstractVector{<:Real},
@@ -72,7 +79,7 @@ function find_optimal_alpha(
             dotp = transpose(b) * iBa0 * b
             dotp2 = transpose(b) * iB * b
 
-            return LinDVal(exp(dotp / 2) * exp(-dotp2 / 2) * sqrt(det(iBa0) * det(a0)))
+            return LinDVal(exp((dotp - dotp2) / 2) * sqrt(abs(det(iBa0) * det(a0))))
         end
 
     prior = NamedTupleDist(alpha = [low[i]..high[i] for i in eachindex(low)])

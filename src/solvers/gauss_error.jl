@@ -42,6 +42,7 @@ mutable struct GaussErrorMatrixUnfolder
     lower::Union{AbstractVector{<:Real}, Nothing}
     higher::Union{AbstractVector{<:Real}, Nothing}
     initial::Union{AbstractVector{<:Real}, Nothing}
+    algo::String
 
     function GaussErrorMatrixUnfolder(
         omegas::Array{Array{T, 2}, 1} where T<:Real,
@@ -49,7 +50,7 @@ mutable struct GaussErrorMatrixUnfolder
         alphas::Union{AbstractVector{<:Real}, Nothing}=nothing,
         lower::Union{AbstractVector{<:Real}, Nothing}=nothing,
         higher::Union{AbstractVector{<:Real}, Nothing}=nothing,
-        initial::Union{AbstractVector{<:Real}, Nothing}=nothing
+        initial::Union{AbstractVector{<:Real}, Nothing}=nothing,
         )
         n = check_args(omegas, method, alphas, lower, higher, initial)
         @info "GaussErrorMatrixUnfolder is created"
@@ -93,6 +94,7 @@ function solve(
             unfolder.omegas, B, b,
             unfolder.initial, unfolder.lower, unfolder.higher
             )
+        @info "Alphas: $(unfolder.alphas)"
     elseif unfolder.method != "User"
         @error "Unknown method" + unfolder.method
         Base.eror("Unknown method" + unfolder.method)
