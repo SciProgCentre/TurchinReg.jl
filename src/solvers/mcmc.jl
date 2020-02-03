@@ -83,7 +83,6 @@ solve(
 * `model` -- errors model, "Gaussian" or predefined likelihood function
 * `samples` -- number of samples
 * `chains`-- number of simulation runs to perform
-* `algorithm` -- BAT.jl algorithm for sampling
 
 **Returns:** dictionary with coefficients of basis functions and errors.
 """
@@ -95,12 +94,12 @@ function solve(
     model::Union{Function, String} = "Gaussian",
     samples::Int = 10 * 1000,
     chains::Int = 1,
-    algorithm::BAT.AbstractSamplingAlgorithm = MetropolisHastings()
+    sampler = "BAT",
     )
 
     @info "Starting solve..."
     data_errors = check_args(unfolder, kernel, data, data_errors)
-    data_errors_inv = save_inv(data_errors)
+    data_errors_inv = sym_inv(data_errors)
     B = make_sym(transpose(kernel) * data_errors_inv * kernel)
     b = transpose(kernel) * transpose(data_errors_inv) * data
     initial = unfolder.initial
@@ -114,14 +113,29 @@ function solve(
         Base.eror("Unknown method: " + unfolder.method)
     end
     @info "Ending solve..."
-    return solve_MCMC_BAT(
-        unfolder, kernel, data, data_errors,
-        model, samples, chains, algorithm
-        )
+    if sampler == "BAT"
+        return solve_BAT(
+            unfolder, kernel, data, data_errors,
+            model, samples, chains
+            )
+    elseif sampler == "AdvancedHMC"
+        return solve_AHMC(
+            unfolder, kernel, data, data_errors,
+            model, samples, chains
+            )
+    elseif sampler == "DynamicHMC"
+        return solve_DHMC(
+            unfolder, kernel, data, data_errors,
+            model, samples, chains
+            )
+    else
+        @error "Unknown sampler"
+        Base.error("Unknown sampler")
+    end
 end
 
 
-function solve_MCMC(
+function solve_BAT(
     unfolder::MCMCMatrixUnfolder,
     kernel::AbstractMatrix{<:Real},
     data::AbstractVector{<:Real},
@@ -129,13 +143,12 @@ function solve_MCMC(
     model::Union{Function, String},
     samples::Int,
     chains::Int,
-    algorithm::BAT.AbstractSamplingAlgorithm
     )
-    @info "Starting solve_MCMC..."
+    @info "Starting solve_BAT..."
 
     sig = transpose(unfolder.alphas) * unfolder.omegas
-    sig_inv = save_inv(sig)
-    data_errors_inv = save_inv(data_errors)
+    sig_inv = sym_inv(sig)
+    data_errors_inv = sym_inv(data_errors)
 
     likelihood = phi -> begin
             mu = kernel * phi.phi
@@ -157,10 +170,98 @@ function solve_MCMC(
 
     prior = NamedTupleDist(phi = MvNormal(zeros(unfolder.n), sig_inv))
     posterior = BAT.PosteriorDensity(model, prior)
-    samples = BAT.bat_sample(posterior, (samples, chains), algorithm).result;
+    samples = BAT.bat_sample(posterior, (samples, chains), MetropolisHastings()).result;
     samples_mode = BAT.mode(samples).phi
     samples_cov = BAT.cov(unshaped.(samples))
     return Dict("coeff" => samples_mode, "alphas" => unfolder.alphas, "errors" => samples_cov)
+end
+
+struct TurchinProblem
+    f::Vector
+    data_errors_inv::Matrix
+    K::Matrix
+    D::Int
+    sig::Matrix
+end
+
+function (problem::TurchinProblem)(θ)
+    @unpack phi = θ
+    @unpack f, data_errors_inv, K, D, sig = problem
+    mu = zeros(D)
+    prior_log = -1/2 * transpose(phi - mu) * sig * (phi - mu)
+    mu_ = K * phi
+    likelihood_log = -1/2 * transpose(f - mu_) * data_errors_inv * (f - mu_)
+    return prior_log + likelihood_log
+end
+
+function solve_DHMC(
+    unfolder::MCMCMatrixUnfolder,
+    kernel::AbstractMatrix{<:Real},
+    data::AbstractVector{<:Real},
+    data_errors::AbstractMatrix{<:Real},
+    model::Union{Function, String},
+    nsamples::Int,
+    chains::Int,
+    )
+    sig = transpose(unfolder.alphas) * unfolder.omegas
+    sig_inv = sym_inv(sig)
+    data_errors_inv = sym_inv(data_errors)
+    n = unfolder.n
+
+    t = TurchinProblem(data, data_errors_inv, kernel, n, sig)
+
+    transT = as((phi = as(Array, asℝ, n),))
+    T = TransformedLogDensity(transT, t)
+    ∇T = ADgradient(:ForwardDiff, T)
+
+    results = mcmc_with_warmup(Random.GLOBAL_RNG, ∇T, nsamples; reporter = NoProgressReport())
+    posterior = TransformVariables.transform.(transT, results.chain)
+
+    coeff = [mean([posterior[j].phi[i] for j in range(1, stop=nsamples)]) for i in range(1, stop=n)]
+    errors = [cov([posterior[j].phi[i] for j in range(1, stop=nsamples)]) for i in range(1, stop=n)]
+
+    return Dict("coeff" => coeff, "alphas" => unfolder.alphas, "errors" => errors)
+
+end
+
+
+function solve_AHMC(
+    unfolder::MCMCMatrixUnfolder,
+    kernel::AbstractMatrix{<:Real},
+    data::AbstractVector{<:Real},
+    data_errors::AbstractMatrix{<:Real},
+    model::Union{Function, String},
+    samples::Int,
+    chains::Int,
+    )
+
+    sig = transpose(unfolder.alphas) * unfolder.omegas
+    sig_inv = sym_inv(sig)
+    data_errors_inv = sym_inv(data_errors)
+    n = unfolder.n
+
+    posterior = let n=n, kernel=kernel, data=data, data_errors=data_errors, sig=sig
+        phi -> begin
+            mu = zeros(n)
+            prior_log = -1/2 * transpose(phi - mu) * sig * (phi - mu)
+            mu_ = kernel * phi
+            likelihood_log = -1/2 * transpose(data - mu_) * data_errors_inv * (data - mu_)
+            return prior_log + likelihood_log
+        end
+    end
+
+    metric = DiagEuclideanMetric(n)
+    hamiltonian = Hamiltonian(metric, posterior, ForwardDiff)
+    initial_ϵ = find_good_eps(hamiltonian, zeros(n))
+    integrator = Leapfrog(initial_ϵ)
+    proposal = NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator)
+    adaptor = StanHMCAdaptor(Preconditioner(metric), NesterovDualAveraging(0.8, integrator))
+    n_adapts = 100
+    res = AdvancedHMC.sample(hamiltonian, proposal, zeros(n), samples, adaptor, n_adapts; progress=false)
+    samples = res[1]
+    coeff = [mean(getindex.(samples, x)) for x in eachindex(samples[1])]
+    errors = [cov(getindex.(samples, x)) for x in eachindex(samples[1])]
+    return Dict("coeff" => coeff, "alphas" => unfolder.alphas, "errors" => errors)
 end
 
 
@@ -253,7 +354,7 @@ function solve(
     model::Union{Function, String} = "Gaussian",
     samples::Int = 10 * 1000,
     chains::Int = 1,
-    algorithm::BAT.AbstractSamplingAlgorithm = MetropolisHastings()
+    sampler = "BAT"
     )
     @info "Starting solve..."
     kernel_array, data_array, data_errors_array = check_args(
@@ -262,7 +363,7 @@ function solve(
     result = solve(
         mcmcunfolder.solver,
         kernel_array, data_array, data_errors_array, model=model,
-        samples=samples, chains=chains, algorithm=algorithm
+        samples=samples, chains=chains, sampler=sampler
         )
     @info "Ending solve..."
     return result

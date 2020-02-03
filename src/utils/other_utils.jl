@@ -3,7 +3,7 @@ plotly()
 gr(size=(500,500), html_output_format=:png)
 
 make_sym(A::AbstractMatrix{<:Real}) = (transpose(A) + A) / 2
-save_inv(A::AbstractMatrix{<:Real}) = make_sym(pinv(A))
+sym_inv(A::AbstractMatrix{<:Real}) = make_sym(pinv(A))
 
 function find_optimal_alpha(
     omegas::Array{Array{T, 2}, 1} where T<:Real,
@@ -23,7 +23,7 @@ function find_optimal_alpha(
         end
         a0 = transpose(a) * omegas
         Ba0 = B + a0
-        iBa0 = save_inv(Ba0)
+        iBa0 = sym_inv(Ba0)
         dotp = transpose(b) * iBa0 * b
 
         function det_(A::Array{<:Real, 2})
@@ -74,8 +74,8 @@ function find_optimal_alpha_BAT(
     likelihood = alpha -> begin
             a0 = transpose(alpha.alpha) * omegas
             Ba0 = B + a0
-            iBa0 = save_inv(Ba0)
-            iB = save_inv(B)
+            iBa0 = sym_inv(Ba0)
+            iB = sym_inv(B)
             dotp = transpose(b) * iBa0 * b
             dotp2 = transpose(b) * iB * b
 

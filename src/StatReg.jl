@@ -6,6 +6,8 @@ module StatReg
     using Polynomials
     using PiecewisePolynomials
     using BAT, ValueShapes, Distributions
+    using AdvancedHMC, Distributions, ForwardDiff
+    using TransformVariables, LogDensityProblems, DynamicHMC, Parameters, Random
 
     include("./utils/utils.jl")
     include("./bases/bases.jl")
