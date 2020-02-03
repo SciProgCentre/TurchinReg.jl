@@ -86,8 +86,8 @@ function find_optimal_alpha_BAT(
     posterior = BAT.PosteriorDensity(likelihood, prior)
     nsamples = 10^4
     nchains = 4
-    samples = BAT.bat_sample(posterior, (nsamples, nchains), MetropolisHastings()).result;
-    samples_mode = BAT.mode(samples).alpha
+    nsamples = BAT.bat_sample(posterior, (nsamples, nchains), MetropolisHastings()).result;
+    samples_mode = BAT.mode(nsamples).alpha
     return samples_mode
 
     #TODO:: find appropriate algo

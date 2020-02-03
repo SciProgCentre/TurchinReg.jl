@@ -106,8 +106,8 @@ solve(
     data_errors::Union{Function, AbstractVector{<:Real}},
     y::Union{AbstractVector{<:Real}, Nothing}=nothing;
     model::Union{Function, String} = "Gaussian",
-    samples::Int = 10 * 1000,
-    chains::Int = 1,
+    nsamples::Int = 10 * 1000,
+    nchains::Int = 1,
     algorithm::BAT.AbstractSamplingAlgorithm = MetropolisHastings()
     )
 ```
@@ -119,8 +119,8 @@ solve(
     data::AbstractVector{<:Real},
     data_errors::AbstractVecOrMat{<:Real};
     model::Union{Function, String} = "Gaussian",
-    samples::Int = 10 * 1000,
-    chains::Int = 1,
+    nsamples::Int = 10 * 1000,
+    nchains::Int = 1,
     algorithm::BAT.AbstractSamplingAlgorithm = MetropolisHastings()
     )
 ```

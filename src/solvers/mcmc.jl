@@ -69,8 +69,8 @@ solve(
     data::AbstractVector{<:Real},
     data_errors::AbstractVecOrMat{<:Real};
     model::Union{Function, String} = "Gaussian",
-    samples::Int = 10 * 1000,
-    chains::Int = 1,
+    nsamples::Int = 10 * 1000,
+    nchains::Int = 1,
     algorithm::BAT.AbstractSamplingAlgorithm = MetropolisHastings()
     )
 ```
@@ -81,8 +81,8 @@ solve(
 * `data` -- function valuess
 * `data_errors` -- function errors
 * `model` -- errors model, "Gaussian" or predefined likelihood function
-* `samples` -- number of samples
-* `chains`-- number of simulation runs to perform
+* `nsamples` -- number of nsamples
+* `nchains`-- number of simulation runs to perform
 
 **Returns:** dictionary with coefficients of basis functions and errors.
 """
@@ -92,8 +92,8 @@ function solve(
     data::AbstractVector{<:Real},
     data_errors::AbstractVecOrMat{<:Real};
     model::Union{Function, String} = "Gaussian",
-    samples::Int = 10 * 1000,
-    chains::Int = 1,
+    nsamples::Int = 10 * 1000,
+    nchains::Int = 1,
     sampler = "BAT",
     )
 
@@ -116,17 +116,17 @@ function solve(
     if sampler == "BAT"
         return solve_BAT(
             unfolder, kernel, data, data_errors,
-            model, samples, chains
+            model, nsamples, nchains
             )
     elseif sampler == "AdvancedHMC"
         return solve_AHMC(
             unfolder, kernel, data, data_errors,
-            model, samples, chains
+            model, nsamples, nchains
             )
     elseif sampler == "DynamicHMC"
         return solve_DHMC(
             unfolder, kernel, data, data_errors,
-            model, samples, chains
+            model, nsamples, nchains
             )
     else
         @error "Unknown sampler"
@@ -141,8 +141,8 @@ function solve_BAT(
     data::AbstractVector{<:Real},
     data_errors::AbstractMatrix{<:Real},
     model::Union{Function, String},
-    samples::Int,
-    chains::Int,
+    nsamples::Int,
+    nchains::Int,
     )
     @info "Starting solve_BAT..."
 
@@ -170,9 +170,9 @@ function solve_BAT(
 
     prior = NamedTupleDist(phi = MvNormal(zeros(unfolder.n), sig_inv))
     posterior = BAT.PosteriorDensity(model, prior)
-    samples = BAT.bat_sample(posterior, (samples, chains), MetropolisHastings()).result;
-    samples_mode = BAT.mode(samples).phi
-    samples_cov = BAT.cov(unshaped.(samples))
+    nsamples = BAT.bat_sample(posterior, (nsamples, nchains), MetropolisHastings()).result;
+    samples_mode = BAT.mode(nsamples).phi
+    samples_cov = BAT.cov(unshaped.(nsamples))
     return Dict("coeff" => samples_mode, "alphas" => unfolder.alphas, "errors" => samples_cov)
 end
 
@@ -201,7 +201,7 @@ function solve_DHMC(
     data_errors::AbstractMatrix{<:Real},
     model::Union{Function, String},
     nsamples::Int,
-    chains::Int,
+    nchains::Int,
     )
     sig = transpose(unfolder.alphas) * unfolder.omegas
     sig_inv = sym_inv(sig)
@@ -231,8 +231,8 @@ function solve_AHMC(
     data::AbstractVector{<:Real},
     data_errors::AbstractMatrix{<:Real},
     model::Union{Function, String},
-    samples::Int,
-    chains::Int,
+    nsamples::Int,
+    nchains::Int,
     )
 
     sig = transpose(unfolder.alphas) * unfolder.omegas
@@ -257,10 +257,10 @@ function solve_AHMC(
     proposal = NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator)
     adaptor = StanHMCAdaptor(Preconditioner(metric), NesterovDualAveraging(0.8, integrator))
     n_adapts = 100
-    res = AdvancedHMC.sample(hamiltonian, proposal, zeros(n), samples, adaptor, n_adapts; progress=false)
+    res = AdvancedHMC.sample(hamiltonian, proposal, zeros(n), nsamples, adaptor, n_adapts; progress=false)
     samples = res[1]
-    coeff = [mean(getindex.(samples, x)) for x in eachindex(samples[1])]
-    errors = [cov(getindex.(samples, x)) for x in eachindex(samples[1])]
+    coeff = [mean(getindex.(nsamples, x)) for x in eachindex(samples[1])]
+    errors = [cov(getindex.(nsamples, x)) for x in eachindex(samples[1])]
     return Dict("coeff" => coeff, "alphas" => unfolder.alphas, "errors" => errors)
 end
 
@@ -326,8 +326,8 @@ solve(
     data_errors::Union{Function, AbstractVector{<:Real}},
     y::Union{AbstractVector{<:Real}, Nothing}=nothing;
     model::Union{Function, String} = "Gaussian",
-    samples::Int = 10 * 1000,
-    chains::Int = 1,
+    nsamples::Int = 10 * 1000,
+    nchains::Int = 1,
     algorithm::BAT.AbstractSamplingAlgorithm = MetropolisHastings()
     )
 ```
@@ -339,8 +339,8 @@ solve(
 * `data_errors` -- function errors
 * `y` -- points to calculate function values and its errors (when data is given as a function)
 * `model` -- errors model, "Gaussian" or predefined likelihood function
-* `samples` -- number of samples
-* `chains`-- number of simulation runs to perform
+* `nsamples` -- number of nsamples
+* `nchains`-- number of simulation runs to perform
 * `algorithm` -- BAT.jl algorithm for sampling
 
 **Returns:** dictionary with coefficients of basis functions and errors.
@@ -352,8 +352,8 @@ function solve(
     data_errors::Union{Function, AbstractVector{<:Real}},
     y::Union{AbstractVector{<:Real}, Nothing}=nothing;
     model::Union{Function, String} = "Gaussian",
-    samples::Int = 10 * 1000,
-    chains::Int = 1,
+    nsamples::Int = 10 * 1000,
+    nchains::Int = 1,
     sampler = "BAT"
     )
     @info "Starting solve..."
@@ -363,7 +363,7 @@ function solve(
     result = solve(
         mcmcunfolder.solver,
         kernel_array, data_array, data_errors_array, model=model,
-        samples=samples, chains=chains, sampler=sampler
+        nsamples=nsamples, nchains=nchains, sampler=sampler
         )
     @info "Ending solve..."
     return result
