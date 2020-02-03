@@ -163,6 +163,7 @@ function solve_BAT(
         model = phi -> LinDVal(likelihood(phi))
     end
 
+
     if isapprox(det(sig)+1, 1)
         @error "Sigma matrix is singular."
         Base.error("Sigma matrix is singular.")
