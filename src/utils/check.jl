@@ -111,59 +111,6 @@ function check_args(
 end
 
 
-function find_optimal_alpha(
-    omegas::Array{Array{T, 2}, 1} where T<:Real,
-    B::AbstractMatrix{<:Real},
-    b::AbstractVector{<:Real},
-    alpha0::AbstractVector{<:Real},
-    low::AbstractVector{<:Real},
-    high::AbstractVector{<:Real}
-    )
-    @info "Starting find_optimal_alpha..."
-    function alpha_prob(a::AbstractVector{<:Real})
-        for i in range(1, stop=length(a))
-            if (a[i] <= low[i]) || (a[i] >= high[i])
-                return -1e4
-            end
-        end
-        a0 = transpose(a) * omegas
-        Ba0 = B + a0
-        iBa0 = make_sym(pinv(Ba0))
-        dotp = transpose(b) * iBa0 * b
-
-        function det_(A::Array{<:Real, 2})
-            if det(A) != 0
-                detA = logabsdet(A)[1]
-            else
-                eigvals_A = sort(eigvals(A))
-                rank_deficiency = size(A)[1] - rank(A)
-                detA = sum(log.(abs.(eigvals_A[(rank_deficiency+1):end])))
-            end
-            return detA
-        end
-
-        return det_(a0) - det_(Ba0) + dotp
-    end
-    @info "Starting optimization..."
-    if any(map(x -> x <= 0, alpha0))
-        @error "All aplha0 should be positive"
-        Base.error("All aplha0 should be positive")
-    end
-    a0 = log.(alpha0)
-    res = optimize(
-        a -> -alpha_prob(exp.(a)), a0,  BFGS(),
-        Optim.Options(x_tol=config.X_TOL_OPTIM, show_trace=false,
-        store_trace=true, allow_f_increases=true))
-    if !Optim.converged(res)
-        @warn "Minimization did not succeed, alpha = $(exp.(Optim.minimizer(res))), return alpha = 0.05."
-        return [0.05]
-    end
-    alphas = exp.(Optim.minimizer(res))
-    @info "Optimized successfully, alphas = $alphas."
-    return alphas
-end
-
-
 function check_args(
     unfolder,
     kernel::Union{Function, AbstractMatrix{<:Real}},

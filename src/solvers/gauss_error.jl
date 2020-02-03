@@ -1,6 +1,3 @@
-make_sym(A::AbstractMatrix{<:Real}) = (transpose(A) + A) / 2
-
-
 """
 Model for discrete data and kernel.
 
@@ -14,6 +11,7 @@ GaussErrorMatrixUnfolder(
     initial::Union{AbstractVector{<:Real}, Nothing}=nothing
     )
 ```
+
 `omegas` -- array of matrices that provide information about basis functions
 
 `method` -- constant selection method, possible options: "EmpiricalBayes" and "User"
@@ -44,6 +42,7 @@ mutable struct GaussErrorMatrixUnfolder
     lower::Union{AbstractVector{<:Real}, Nothing}
     higher::Union{AbstractVector{<:Real}, Nothing}
     initial::Union{AbstractVector{<:Real}, Nothing}
+    algo::String
 
     function GaussErrorMatrixUnfolder(
         omegas::Array{Array{T, 2}, 1} where T<:Real,
@@ -51,11 +50,11 @@ mutable struct GaussErrorMatrixUnfolder
         alphas::Union{AbstractVector{<:Real}, Nothing}=nothing,
         lower::Union{AbstractVector{<:Real}, Nothing}=nothing,
         higher::Union{AbstractVector{<:Real}, Nothing}=nothing,
-        initial::Union{AbstractVector{<:Real}, Nothing}=nothing
+        initial::Union{AbstractVector{<:Real}, Nothing}=nothing,
         )
-        m = check_args(omegas, method, alphas, lower, higher, initial)
+        n = check_args(omegas, method, alphas, lower, higher, initial)
         @info "GaussErrorMatrixUnfolder is created"
-        return new(omegas, m, method, alphas, lower, higher, initial)
+        return new(omegas, n, method, alphas, lower, higher, initial)
     end
 end
 
@@ -86,7 +85,7 @@ function solve(
     )
     @info "Starting solve..."
     data_errors = check_args(unfolder, kernel, data, data_errors)
-    data_errorsInv = make_sym(pinv(data_errors))
+    data_errorsInv = sym_inv(data_errors)
     B = make_sym(transpose(kernel) * data_errorsInv * kernel)
     b = transpose(kernel) * transpose(data_errorsInv) * data
     initial = unfolder.initial
@@ -95,12 +94,13 @@ function solve(
             unfolder.omegas, B, b,
             unfolder.initial, unfolder.lower, unfolder.higher
             )
+        @info "Alphas: $(unfolder.alphas)"
     elseif unfolder.method != "User"
         @error "Unknown method" + unfolder.method
         Base.eror("Unknown method" + unfolder.method)
     end
     Ba0 = B + transpose(unfolder.alphas) * unfolder.omegas
-    iBa0 = make_sym(pinv(Ba0))
+    iBa0 = sym_inv(Ba0)
     r = iBa0 * b
     @info "Ending solve..."
     return Dict("coeff" => r, "errors" => iBa0, "alphas" => unfolder.alphas)
