@@ -197,9 +197,9 @@ end
     @test @returntrue model_cubic_spline4 = MCMCUnfolder(basis_cubic_spline, [omega_cubic_spline], "EmpiricalBayes", lower=[1e-8], higher=[10.], initial=[0.3])
 
     @test @returntrue model1_1, model1_2 = solve(model_cubic_spline1, my_kernel, f, sig, y)
-    @test @returntrue model2_1, model2_2  = solve(model_cubic_spline2, getOpticsKernels("heaviside"), f, sig, y, samples=10)
-    @test @returntrue model3_1, model3_2  = solve(model_cubic_spline3, getOpticsKernels("rectangular"), f, sig, y, samples=10)
-    @test @returntrue model4_1, model4_2  = solve(model_cubic_spline4, getOpticsKernels("triangular"), f, sig, y, samples=10)
+    @test @returntrue model2_1, model2_2  = solve(model_cubic_spline2, getOpticsKernels("heaviside"), f, sig, y, nsamples=10)
+    @test @returntrue model3_1, model3_2  = solve(model_cubic_spline3, getOpticsKernels("rectangular"), f, sig, y, nsamples=10)
+    @test @returntrue model4_1, model4_2  = solve(model_cubic_spline4, getOpticsKernels("triangular"), f, sig, y, nsamples=10)
 
     @test @returntrue sim1 = mcmc(model1_1...; model1_2...)
     @test @returntrue res1 = get_values(sim1)
@@ -215,10 +215,10 @@ end
     @test @returntrue model_cubic_spline3_matrix = MCMCMatrixUnfolder([omega_cubic_spline], "EmpiricalBayes", alphas=[1.], lower=[1e-8], higher=[10.], initial=[0.3])
     @test @returntrue model_cubic_spline4_matrix = MCMCMatrixUnfolder([omega_cubic_spline], "EmpiricalBayes", lower=[1e-8], higher=[10.], initial=[0.3])
     #
-    @test @returntrue model1_1, model1_2 = solve(model_cubic_spline1_matrix, discretize_kernel(basis_cubic_spline, my_kernel, y), f, sig, samples=10)
-    @test @returntrue model2_1, model2_2 = solve(model_cubic_spline2_matrix, discretize_kernel(basis_cubic_spline, getOpticsKernels("heaviside"), y), f, sig, samples=10)
-    @test @returntrue model3_1, model3_2 = solve(model_cubic_spline3_matrix, discretize_kernel(basis_cubic_spline, getOpticsKernels("rectangular"), y), f, sig, samples=10)
-    @test @returntrue model4_1, model4_2 = solve(model_cubic_spline4_matrix, discretize_kernel(basis_cubic_spline, getOpticsKernels("triangular"), y), f, sig, samples=10)
+    @test @returntrue model1_1, model1_2 = solve(model_cubic_spline1_matrix, discretize_kernel(basis_cubic_spline, my_kernel, y), f, sig, nsamples=10)
+    @test @returntrue model2_1, model2_2 = solve(model_cubic_spline2_matrix, discretize_kernel(basis_cubic_spline, getOpticsKernels("heaviside"), y), f, sig, nsamples=10)
+    @test @returntrue model3_1, model3_2 = solve(model_cubic_spline3_matrix, discretize_kernel(basis_cubic_spline, getOpticsKernels("rectangular"), y), f, sig, nsamples=10)
+    @test @returntrue model4_1, model4_2 = solve(model_cubic_spline4_matrix, discretize_kernel(basis_cubic_spline, getOpticsKernels("triangular"), y), f, sig, nsamples=10)
 
     @test @returntrue sim1 = mcmc(model1_1...; model1_2...)
     @test @returntrue res1 = get_values(sim1)

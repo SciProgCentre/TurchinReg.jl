@@ -105,12 +105,10 @@ solve(
     data::Union{Function, AbstractVector{<:Real}},
     data_errors::Union{Function, AbstractVector{<:Real}},
     y::Union{AbstractVector{<:Real}, Nothing}=nothing;
-    model::Union{Model, String} = "Gaussian",
-    samples::Int = 10 * 1000,
-    burnin::Int = 0,
-    thin::Int = 1,
-    chains::Int = 1,
-    verbose::Bool = false
+    model::Union{Function, String} = "Gaussian",
+    nsamples::Int = 10 * 1000,
+    nchains::Int = 1,
+    algorithm::BAT.AbstractSamplingAlgorithm = MetropolisHastings()
     )
 ```
 
@@ -120,20 +118,14 @@ solve(
     kernel::AbstractMatrix{<:Real},
     data::AbstractVector{<:Real},
     data_errors::AbstractVecOrMat{<:Real};
-    model::Union{Model, String} = "Gaussian",
-    samples::Int = 10 * 1000,
-    burnin::Int = 0,
-    thin::Int = 1,
-    chains::Int = 1,
-    verbose::Bool = false
+    model::Union{Function, String} = "Gaussian",
+    nsamples::Int = 10 * 1000,
+    nchains::Int = 1,
+    algorithm::BAT.AbstractSamplingAlgorithm = MetropolisHastings()
     )
 ```
 
 ## Result
-
-```@docs
-get_values
-```
 
 ```@docs
 PhiVec
