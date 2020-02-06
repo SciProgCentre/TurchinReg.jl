@@ -95,10 +95,13 @@ function solve(
     nsamples::Int = 10 * 1000,
     nchains::Int = 1,
     sampler = "BAT",
+<<<<<<< HEAD
     prior_phi::AbstractVector{<:Real},
     lower_phi::AbstractVector{<:Real},
     higher_phi::AbstractVector{<:Real},
     measure_phi::AbstractVector{<:Real},
+=======
+>>>>>>> aba9e673b080e9e96c4680e8dc74acea760d966f
     )
 
     @info "Starting solve..."
