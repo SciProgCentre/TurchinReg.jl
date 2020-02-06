@@ -65,6 +65,10 @@ struct PhiVec
         return new(coeff, basis, errors, phi_function_(coeff, basis), error_function_(errors, basis))
     end
 
+    function PhiVec(coeff::AbstractVector{<:Real}, basis::Basis, errors::AbstractVector{<:Real})
+        return PhiVec(coeff, basis, cat(errors...; dims=(1, 2)))
+    end
+
     function PhiVec(result::Dict, basis::Basis)
         if !haskey(result, "coeff")
             @error "No 'coeff' in dictionary"

@@ -95,6 +95,10 @@ function solve(
     nsamples::Int = 10 * 1000,
     nchains::Int = 1,
     sampler = "BAT",
+    prior_phi::AbstractVector{<:Real},
+    lower_phi::AbstractVector{<:Real},
+    higher_phi::AbstractVector{<:Real},
+    measure_phi::AbstractVector{<:Real},
     )
 
     @info "Starting solve..."
@@ -116,17 +120,17 @@ function solve(
     if sampler == "BAT"
         return solve_BAT(
             unfolder, kernel, data, data_errors,
-            model, nsamples, nchains
+            model, nsamples, nchains, prior_phi, lower_phi, higher_phi, measure_phi
             )
     elseif sampler == "AdvancedHMC"
         return solve_AHMC(
             unfolder, kernel, data, data_errors,
-            model, nsamples, nchains
+            model, nsamples, nchains, prior_phi, lower_phi, higher_phi, measure_phi
             )
     elseif sampler == "DynamicHMC"
         return solve_DHMC(
             unfolder, kernel, data, data_errors,
-            model, nsamples, nchains
+            model, nsamples, nchains, prior_phi, lower_phi, higher_phi, measure_phi
             )
     else
         @error "Unknown sampler"
@@ -143,6 +147,10 @@ function solve_BAT(
     model::Union{Function, String},
     nsamples::Int,
     nchains::Int,
+    prior_phi::AbstractVector{<:Real},
+    lower_phi::AbstractVector{<:Real},
+    higher_phi::AbstractVector{<:Real},
+    measure_phi::AbstractVector{<:Real},
     )
     @info "Starting solve_BAT..."
 
@@ -150,17 +158,30 @@ function solve_BAT(
     sig_inv = sym_inv(sig)
     data_errors_inv = sym_inv(data_errors)
 
-    likelihood = phi -> begin
+    likelihood = let kernel=kernel, prior_phi=prior_phi, lower_phi=lower_phi,
+        higher_phi=higher_phi, measure_phi=measure_phi, data=data, data_errors_inv=data_errors_inv
+        phi -> begin
             mu = kernel * phi.phi
-            return exp(-1/2 * transpose(data - mu) * data_errors_inv * (data - mu))
+            bounds_correction = 0
+            for i in 1:length(phi.phi)
+                if phi.phi[i] > higher_phi[i]
+                    bounds_correction -= (phi.phi[i] - higher_phi[i])/measure_phi[i]
+                end
+                if phi.phi[i] < lower_phi[i]
+                    bounds_correction -= (lower_phi[i] - phi.phi[i])/measure_phi[i]
+                end
+            end
+            likelihood_res = -1/2 * transpose(data - mu) * data_errors_inv * (data - mu)
+            return likelihood_res + bounds_correction
         end
+    end
 
     if typeof(model) == String
         if model != "Gaussian"
             @error "Unknown model name."
             Base.error("Unknown model name.")
         end
-        model = phi -> LinDVal(likelihood(phi))
+        model = phi -> LogDVal(likelihood(phi))
     end
 
     if isapprox(det(sig)+1, 1)
@@ -168,11 +189,11 @@ function solve_BAT(
         Base.error("Sigma matrix is singular.")
     end
 
-    prior = NamedTupleDist(phi = MvNormal(zeros(unfolder.n), sig_inv))
+    prior = NamedTupleDist(phi = MvNormal(prior_phi, sig_inv))
     posterior = BAT.PosteriorDensity(model, prior)
-    nsamples = BAT.bat_sample(posterior, (nsamples, nchains), MetropolisHastings()).result;
-    samples_mode = BAT.mode(nsamples).phi
-    samples_cov = BAT.cov(unshaped.(nsamples))
+    samples = BAT.bat_sample(posterior, (nsamples, nchains), MetropolisHastings()).result;
+    samples_mode = BAT.mode(samples).phi
+    samples_cov = BAT.cov(unshaped.(samples))
     return Dict("coeff" => samples_mode, "alphas" => unfolder.alphas, "errors" => samples_cov)
 end
 
@@ -182,16 +203,29 @@ struct TurchinProblem
     K::Matrix
     D::Int
     sig::Matrix
+    prior_phi::AbstractVector{<:Real}
+    lower_phi::AbstractVector{<:Real}
+    higher_phi::AbstractVector{<:Real}
+    measure_phi::AbstractVector{<:Real}
 end
 
 function (problem::TurchinProblem)(θ)
     @unpack phi = θ
-    @unpack f, data_errors_inv, K, D, sig = problem
-    mu = zeros(D)
+    @unpack f, data_errors_inv, K, D, sig, prior_phi, lower_phi, higher_phi, measure_phi = problem
+    mu = prior_phi
     prior_log = -1/2 * transpose(phi - mu) * sig * (phi - mu)
     mu_ = K * phi
     likelihood_log = -1/2 * transpose(f - mu_) * data_errors_inv * (f - mu_)
-    return prior_log + likelihood_log
+    bounds_correction = 0
+    for i in 1:length(phi)
+        if phi[i] > higher_phi[i]
+            bounds_correction -= (phi[i] - higher_phi[i])/measure_phi[i]
+        end
+        if phi[i] < lower_phi[i]
+            bounds_correction -= (lower_phi[i] - phi[i])/measure_phi[i]
+        end
+    end
+    return prior_log + likelihood_log + bounds_correction
 end
 
 function solve_DHMC(
@@ -202,13 +236,18 @@ function solve_DHMC(
     model::Union{Function, String},
     nsamples::Int,
     nchains::Int,
+    prior_phi::AbstractVector{<:Real},
+    lower_phi::AbstractVector{<:Real},
+    higher_phi::AbstractVector{<:Real},
+    measure_phi::AbstractVector{<:Real},
     )
     sig = transpose(unfolder.alphas) * unfolder.omegas
     sig_inv = sym_inv(sig)
     data_errors_inv = sym_inv(data_errors)
     n = unfolder.n
 
-    t = TurchinProblem(data, data_errors_inv, kernel, n, sig)
+    t = TurchinProblem(data, data_errors_inv, kernel, n, sig,
+        prior_phi, lower_phi, higher_phi, measure_phi)
 
     transT = as((phi = as(Array, asℝ, n),))
     T = TransformedLogDensity(transT, t)
@@ -233,6 +272,10 @@ function solve_AHMC(
     model::Union{Function, String},
     nsamples::Int,
     nchains::Int,
+    prior_phi::AbstractVector{<:Real},
+    lower_phi::AbstractVector{<:Real},
+    higher_phi::AbstractVector{<:Real},
+    measure_phi::AbstractVector{<:Real},
     )
 
     sig = transpose(unfolder.alphas) * unfolder.omegas
@@ -240,27 +283,37 @@ function solve_AHMC(
     data_errors_inv = sym_inv(data_errors)
     n = unfolder.n
 
-    posterior = let n=n, kernel=kernel, data=data, data_errors=data_errors, sig=sig
+    posterior = let n=n, kernel=kernel, data=data, data_errors=data_errors, sig=sig, prior_phi=prior_phi
         phi -> begin
-            mu = zeros(n)
+            mu = prior_phi#zeros(n)
             prior_log = -1/2 * transpose(phi - mu) * sig * (phi - mu)
+            bounds_correction = 0
+            for i in 1:length(phi)
+                if phi[i] > higher_phi[i]
+                    bounds_correction -= (phi[i] - higher_phi[i])/measure_phi[i]
+                end
+                if phi[i] < lower_phi[i]
+                    bounds_correction -= (lower_phi[i] - phi[i])/measure_phi[i]
+                end
+            end
             mu_ = kernel * phi
             likelihood_log = -1/2 * transpose(data - mu_) * data_errors_inv * (data - mu_)
-            return prior_log + likelihood_log
+            return prior_log + likelihood_log + bounds_correction
         end
     end
 
     metric = DiagEuclideanMetric(n)
     hamiltonian = Hamiltonian(metric, posterior, ForwardDiff)
-    initial_ϵ = find_good_eps(hamiltonian, zeros(n))
+    initial_ϵ = find_good_eps(hamiltonian, prior_phi)
     integrator = Leapfrog(initial_ϵ)
     proposal = NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator)
     adaptor = StanHMCAdaptor(Preconditioner(metric), NesterovDualAveraging(0.8, integrator))
     n_adapts = 100
-    res = AdvancedHMC.sample(hamiltonian, proposal, zeros(n), nsamples, adaptor, n_adapts; progress=false)
+    res = AdvancedHMC.sample(hamiltonian, proposal, prior_phi, nsamples, adaptor, n_adapts; progress=true)
+    @info "Finished sampling"
     samples = res[1]
-    coeff = [mean(getindex.(nsamples, x)) for x in eachindex(samples[1])]
-    errors = [cov(getindex.(nsamples, x)) for x in eachindex(samples[1])]
+    coeff = [mean(getindex.(samples, x)) for x in eachindex(samples[1])]
+    errors = [cov(getindex.(samples, x)) for x in eachindex(samples[1])]
     return Dict("coeff" => coeff, "alphas" => unfolder.alphas, "errors" => errors)
 end
 
@@ -354,7 +407,11 @@ function solve(
     model::Union{Function, String} = "Gaussian",
     nsamples::Int = 10 * 1000,
     nchains::Int = 1,
-    sampler = "BAT"
+    sampler = "BAT",
+    prior_phi::AbstractVector{<:Real},
+    lower_phi::AbstractVector{<:Real},
+    higher_phi::AbstractVector{<:Real},
+    measure_phi::AbstractVector{<:Real},
     )
     @info "Starting solve..."
     kernel_array, data_array, data_errors_array = check_args(
@@ -363,7 +420,8 @@ function solve(
     result = solve(
         mcmcunfolder.solver,
         kernel_array, data_array, data_errors_array, model=model,
-        nsamples=nsamples, nchains=nchains, sampler=sampler
+        nsamples=nsamples, nchains=nchains, sampler=sampler,
+        prior_phi=prior_phi, lower_phi=lower_phi, higher_phi=higher_phi, measure_phi=measure_phi
         )
     @info "Ending solve..."
     return result
