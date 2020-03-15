@@ -9,14 +9,14 @@ after_success:
 jobs:
   include:
 
-    # - stage: "Testing"
-    #
-    #   julia: 1.1
-    #
-    #   stript:
-    #     - julia --project=@ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate(); Pkg.test(coverage=true)'
-    #
-    #   after_success: skip
+    - stage: "Testing"
+    
+      julia: 1.1
+
+      stript:
+        - julia --project=@ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate(); Pkg.test(coverage=true)'
+
+      after_success: skip
 
 
     - stage: "Documentation"
