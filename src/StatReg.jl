@@ -5,7 +5,7 @@ module StatReg
     using Logging
     using Polynomials
     using PiecewisePolynomials
-    using BAT, ValueShapes, Distributions
+    using BAT, ValueShapes
     using AdvancedHMC, Distributions, ForwardDiff
     using TransformVariables, LogDensityProblems, DynamicHMC, Parameters, Random
 
@@ -16,11 +16,9 @@ module StatReg
     include("./solvers/solvers.jl")
 
     export BaseFunction, Basis, omega, FourierBasis, CubicSplineBasis, LegendreBasis, BernsteinBasis, discretize_kernel
-    # export GaussErrorMatrixUnfolder, solve, GaussErrorUnfolder, simple_solver
     export AlphasType, ArgmaxBAT, ArgmaxOptim, Marginalize, User, PhiBounds, AlgoType, Analytically, BATSampling, AHMCSampling, DHMCSampling, make_bounds, solve
     export PhiVec
     export config, Config
-    # export MCMCMatrixUnfolder, MCMCUnfolder
     export getOpticsKernels
 
 end
