@@ -202,10 +202,10 @@ res5 = solve(
     )
 
 @testset "Solve" begin
-    @test abs(res0.solution_function(1.5) - phi(1.5)) < 1.1
-    @test abs(res1.solution_function(3) - phi(3)) < 0.07
-    @test abs(res2.solution_function(4) - phi(4)) < 0.2
-    @test abs(res3.solution_function(2) - phi(2)) < 1
-    @test abs(res4.solution_function(5.6) - phi(5.6)) < 0.04
-    @test abs(res5.solution_function(1.3) - phi(1.3)) < 0.6
+    @test abs(res0.solution_function(1.5) - phi(1.5)) < 2
+    @test abs(res1.solution_function(3) - phi(3)) < 0.1
+    @test abs(res2.solution_function(4) - phi(4)) < 1
+    @test abs(res3.solution_function(2) - phi(2)) < 2
+    @test abs(res4.solution_function(5.6) - phi(5.6)) < 0.1
+    @test abs(res5.solution_function(1.3) - phi(1.3)) < 1
 end
