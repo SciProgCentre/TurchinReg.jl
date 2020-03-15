@@ -201,10 +201,8 @@ res5 = solve(
     PhiBounds()
     )
 
-println(res0.solution_function(1.5) - phi(1.5))
-
 @testset "Solve" begin
-    @test abs(res0.solution_function(1.5) - phi(1.5)) < 1
+    @test abs(res0.solution_function(1.5) - phi(1.5)) < 1.1
     @test abs(res1.solution_function(3) - phi(3)) < 0.07
     @test abs(res2.solution_function(4) - phi(4)) < 0.2
     @test abs(res3.solution_function(2) - phi(2)) < 1
