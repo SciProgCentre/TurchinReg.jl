@@ -3,9 +3,6 @@ language: julia
 julia:
   - 1.1
 
-after_success:
-  - julia -e 'import Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
-
 jobs:
   include:
 
@@ -13,8 +10,8 @@ jobs:
 
       julia: 1.1
 
-      stript:
-        - julia --project=. -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate(); Pkg.test(coverage=true)'
+      sсript:
+        - julia --project=. -e 'using Pkg; Pkg.develop(StatReg); Pkg.instantiate(); Pkg.test(StatReg, coverage=true)'
 
       after_success: skip
 
