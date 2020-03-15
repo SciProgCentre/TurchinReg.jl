@@ -11,7 +11,7 @@ jobs:
       julia: 1.1
 
       sсript:
-        - julia --project=. -e 'using Pkg; Pkg.develop("StatReg"); Pkg.instantiate(); Pkg.test("StatReg", coverage=true)'
+        - julia -e 'using Pkg; Pkg.build(; verbose = true); Pkg.test(coverage=true)'
 
       after_success: skip
 
