@@ -17,30 +17,22 @@ LegendreBasis(a::Real, b::Real, n::Int)
 struct LegendreBasis <: Basis
     a::Real
     b::Real
-    basis_functions::AbstractVector{BaseFunction}
+    basis_functions::AbstractVector
 
     function basis_functions_legendre(a::Real, b::Real, n::Int)
         basis_functions = []
         for i = 1:n
             func_ = Fun(Legendre(), [zeros(i-1);1])
             func = x::Float64 -> func_(2 * (x - a) / (b - a) - 1)
-            support = (a, b)
-            push!(basis_functions, BaseFunction(func, support))
+            push!(basis_functions, func)
         end
         return basis_functions
     end
 
     function LegendreBasis(a::Real, b::Real, n::Int)
-        if a >= b
-            @error "Incorrect specification of a segment: `a` should be less than `b`."
-            Base.error("Incorrect specification of a segment: `a` should be less than `b`.")
-        end
-        if n <= 0
-            @error "Number of basis functions should be positive."
-            Base.error("Number of basis functions should be positive.")
-        end
+        @assert a < b "Incorrect specification of a segment: `a` should be less than `b`"
+        @assert n > 0 "Number of basis functions should be positive"
         basis_functions = basis_functions_legendre(a, b, n)
-        @info "Legendre polynomials basis is created."
         return new(a, b, basis_functions)
     end
 end
@@ -48,11 +40,8 @@ end
 
 @memoize function omega(basis::LegendreBasis, order::Int)
     @info "Calculating omega matrix for Legendre polynomials basis derivatives of order $order..."
-    if order < 0
-        @error "Order of derivative should be positive."
-        Base.error("Order of derivative should be positive.")
-    end
-    n = Base.length(basis)
+    @assert order >= 0 "Order of derivative should be positive"
+    n = length(basis)
     a = basis.a
     b = basis.b
     omega = zeros(Float64, n, n)

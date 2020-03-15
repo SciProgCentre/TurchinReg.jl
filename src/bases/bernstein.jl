@@ -16,61 +16,51 @@ BernsteinBasis(
 
 * `a::Real` -- beginning of the support
 * `b::Real` -- end of the support
-* `basis_functions::AbstractVector{BaseFunction}` -- array of basis functions
-* `boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}}` -- boundary conditions of basis functions. If tuple, the first element affects left bound, the second element affects right bound. If string, both sides are affected. Possible options: `"dirichlet"`, `nothing`.
+* `basis_functions::AbstractVector{Function}` -- array of basis functions
+* `boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}}` -- boundary conditions of basis functions. Possible options: `"dirichlet"`, `nothing`.
 """
 struct BernsteinBasis <: Basis
     a::Real
     b::Real
-    basis_functions::AbstractVector{BaseFunction}
+    basis_functions::AbstractVector
     boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}}
 
     @memoize function basis_functions_bernstein(
         a::Real, b::Real, n::Int,
         boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}}
         )
-
         basis_functions = []
-        for k = 0:n
-            coeff = convert(Float64, binomial(BigInt(n),BigInt(k)))
-            func = x::Float64 -> coeff  *
-                ((x - a) / (b - a))^k *
-                (1 - ((x - a) / (b - a)))^(n - k)
-            support = (a, b)
-            push!(basis_functions, BaseFunction(func, support))
-        end
+        left_condition, right_condition = boundary_condition
+        beg_function = 1
+        end_function = n
 
-        function apply_condition(
-            condition::Union{String, Nothing},
-            side::String,
-            basis_functions::AbstractVector
-            )
-
-            if condition == nothing
-                return basis_functions
-            end
-
-            if condition == "dirichlet"
-                if side == "left"
-                    return basis_functions[2:end]
-                else
-                    return basis_functions[1:end-1]
-                end
-            end
+        if left_condition == "dirichlet"
+            n += 1
+            beg_function = 2
+        elseif left_condition != nothing
             @error "BernsteinPolynomial: Unknown boundary condition: " + condition
             Base.error(
             "BernsteinPolynomial: Unknown boundary condition: " + condition)
         end
 
-        left_condition, right_condition = boundary_condition
-        basis_functions = apply_condition(
-            left_condition, "left", basis_functions
-            )
-        basis_functions = apply_condition(
-            right_condition, "right", basis_functions
-            )
+        if right_condition == "dirichlet"
+            n += 1
+            end_function = n-1
+        elseif right_condition != nothing
+            @error "BernsteinPolynomial: Unknown boundary condition: " + condition
+            Base.error(
+            "BernsteinPolynomial: Unknown boundary condition: " + condition)
+        end
 
-        return basis_functions
+        for k = 0:n
+            coeff = convert(Float64, binomial(BigInt(n),BigInt(k)))
+            func = x::Float64 -> coeff  *
+                ((x - a) / (b - a))^k *
+                (1 - ((x - a) / (b - a)))^(n - k)
+            push!(basis_functions, func)
+        end
+
+        return basis_functions[beg_function:end_function]
     end
 
     function BernsteinBasis(
@@ -80,21 +70,12 @@ struct BernsteinBasis <: Basis
             Nothing,
             String}=nothing
             )
-
-        if a >= b
-            @error "Incorrect specification of a segment: `a` should be less than `b`."
-            Base.error("Incorrect specification of a segment: `a` should be less than `b`.")
-        end
-        if n <= 0
-            @error "Number of basis functions should be positive."
-            Base.error("Number of basis functions should be positive.")
-        end
-
+        @assert a < b "Incorrect specification of a segment: `a` should be less than `b`"
+        @assert n > 0 "Number of basis functions should be positive"
         if typeof(boundary_condition) == String || typeof(boundary_condition) == Nothing
             basis_functions = basis_functions_bernstein(
                 a, b, n, (boundary_condition, boundary_condition)
                 )
-            @info "Bernstein polynomials basis is created."
             return new(
                 a, b, basis_functions,
                 (boundary_condition, boundary_condition)
@@ -103,7 +84,6 @@ struct BernsteinBasis <: Basis
             basis_functions = basis_functions_bernstein(
                 a, b, n, boundary_condition
                 )
-            @info "Bernstein polynomials basis is created."
             return new(a, b, basis_functions, boundary_condition)
         end
     end
@@ -112,12 +92,9 @@ end
 
 @memoize function omega(basis::BernsteinBasis, order::Int)
     @info "Calculating omega matrix for Bernstein polynomials basis derivatives of order $order..."
-    if order < 0
-        @error "Order of derivative should be positive."
-        Base.error("Order of derivative should be positive.")
-    end
+    @assert order >= 0 "Order of derivative should be non-negative"
     left_condition, right_condition = basis.boundary_condition
-    n = Base.length(basis) - 1
+    n = length(basis)
     a = basis.a
     b = basis.b
 
@@ -139,39 +116,32 @@ end
             ) / (b - a)^l * sum(coeff .* basis_functions)
     end
 
-    begin_function_number = 0
-    end_function_number = n
-    n_true_value = n
+    beg_omega = 1
+    end_omega = n
 
     if left_condition == "dirichlet"
-        n_true_value += 1
+        n += 1
+        beg_omega = 2
     end
 
     if right_condition == "dirichlet"
-        n_true_value += 1
+        n += 1
+        end_omega = n-1
     end
 
-    omega = zeros(Float64, n_true_value+1, n_true_value+1)
+    omega = zeros(Float64, n, n)
 
-    for i = 0:n_true_value
-        for j = i:n_true_value
-            omega[i+1, j+1] = quadgk(
+    for i = 1:n
+        for j = 1:n
+            omega[i, j] = quadgk(
             x::Float64 ->
-            derivative(i, n_true_value, order, x) *
-            derivative(j, n_true_value, order, x),
+            derivative(i-1, n, order, x) *
+            derivative(j-1, n, order, x),
             a, b, rtol=config.RTOL_QUADGK,
             maxevals=config.MAXEVALS_QUADGK, order=config.ORDER_QUADGK)[1]
-            omega[j+1, i+1] = omega[i+1, j+1]
+            omega[j, i] = omega[i, j]
         end
     end
-
-    if left_condition == "dirichlet"
-        omega = omega[2:end, 2:end]
-    end
-
-    if right_condition == "dirichlet"
-        omega = omega[1:end-1, 1:end-1]
-    end
     @info "Omega caclulated successfully."
-    return omega
+    return omega[beg_omega:end_omega, beg_omega:end_omega]
 end

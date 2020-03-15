@@ -1,3 +1,5 @@
-include("gauss_error.jl")
-include("mcmc.jl")
-include("simple_solver.jl")
+include("solve.jl")
+include("analytically.jl")
+include("bat.jl")
+include("ahmc.jl")
+include("dhmc.jl")

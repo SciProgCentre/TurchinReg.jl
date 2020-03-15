@@ -1,150 +1,51 @@
-function check_args(
-    omegas::Array{Array{T, 2}, 1} where T<:Real,
-    method::String,
-    alphas::Union{AbstractVector{<:Real}, Nothing},
-    low::Union{AbstractVector{<:Real}, Nothing},
-    high::Union{AbstractVector{<:Real}, Nothing},
-    alpha0::Union{AbstractVector{<:Real}, Nothing}
-    )
-    if Base.length(omegas) == 0
-        @error "Regularization matrix Omega is absent"
-        Base.error("Regularization matrix Omega is absent")
+function check_data(data, data_errors, kernel, basis, measurement_points)
+    if !(typeof(data)<:AbstractVector{<:Real})
+        @assert measurement_points!=nothing "For data as function measurement_points are required"
+        data = data.(measurement_points)
     end
-
-    if Base.length(size(omegas[1])) != 2
-        @error "Matrix Omega must have two dimensions"
-        Base.error("Matrix Omega must have two dimensions")
+    if !(typeof(data_errors)<:AbstractVecOrMat{<:Real})
+        @assert measurement_points!=nothing "For data_errors as function measurement_points are required"
+        data_errors = data_errors.(measurement_points)
     end
-
-    n, m = size(omegas[1])
-    if n != m
-        @error "Matrix Omega must be square"
-        Base.error("Matrix Omega must be square")
-    end
-
-    for omega in omegas
-        if length(size(omega)) != 2
-            @error "Matrix Omega must have two dimensions"
-            Base.error("Matrix Omega must have two dimensions")
-        end
-        n1, m1 = size(omega)
-        if m1 != m
-            @error "All omega matrices must have equal dimensions"
-            Base.error("All omega matrices must have equal dimensions")
-        end
-        if m1 != n1
-            @error "Omega must be square"
-            Base.error("Omega must be square")
-        end
-    end
-
-    if method == "User"
-        if alphas == nothing
-            @error "Alphas must be defined for method='User'"
-            Base.error("Alphas must be defined for method='User'")
-        end
-        if Base.length(alphas) != Base.length(omegas)
-            @error "Omegas and alphas must have equal lengths"
-            Base.error("Omegas and alphas must have equal lengths")
-        end
-    end
-    if method == "EmpiricalBayes"
-        if low == nothing
-            @error "Lower limits of alphas should be provided for method=EmpiricalBayes"
-            Base.error("Lower limits of alphas should be provided for method=EmpiricalBayes")
-        end
-        if high == nothing
-            @error "Higher limits of alphas should be provided for method=EmpiricalBayes"
-            Base.error("Higher limits of alphas should be provided for method=EmpiricalBayes")
-        end
-        if alpha0 == nothing
-            @error "Initial values of alphas should be provided for method=EmpiricalBayes"
-            Base.error("Initial values of alphas should be provided for method=EmpiricalBayes")
-        end
-        if (length(low) != length(high)) || (length(low) != length(alpha0)) || (length(alpha0) != length(omegas))
-            @error "Low, high and alpha0 should have equal lengths"
-            Base.error("Low, high and alpha0 should have equal lengths")
-        end
-        if any(i -> (i <= 0), alpha0)
-            @error "All elements in alpha0 should be positive"
-            Base.error("All elements in alpha0 should be positive")
-        end
-    end
-    return m
-end
-
-
-function check_args(
-    unfolder,
-    kernel::AbstractMatrix{<:Real},
-    data::AbstractVector{<:Real},
-    data_errors::AbstractVecOrMat{<:Real},
-    )
-    m, n = size(kernel)
-    if n != unfolder.n
-        @error "Kernel and unfolder must have equal dimentions."
-        Base.error("Kernel and unfolder must have equal dimentions.")
-    end
-
-    if length(data) != m
-        @error "K and f must be (m,n) and (m,) dimensional."
-        Base.error("K and f must be (m,n) and (m,) dimensional.")
-    end
-
     if length(size(data_errors)) == 1
         data_errors = cat(data_errors...; dims=(1,2))
-    elseif length(size(data_errors)) != 2
-        @error "Sigma matrix must be two-dimensional."
-        Base.error("Sigma matrix must be two-dimensional.")
     end
-
-    if size(data_errors)[1] != size(data_errors)[2]
-        @error "Sigma matrix must be square."
-        Base.error("Sigma matrix must be square.")
+    if !(typeof(kernel)<:AbstractMatrix{<:Real})
+        @assert isfinite(kernel(1, 1)) "Kernel should be function of 2 variables"
+        @assert measurement_points!=nothing "For kernel as function measurement_points are required"
+        kernel = discretize_kernel(basis, kernel, measurement_points)
     end
-
-    if length(data) != size(data_errors)[1]
-        @error "Sigma matrix and f must have equal dimensions."
-        Base.error("Sigma matrix and f must have equal dimensions.")
-    end
-    return data_errors
+    m, n = size(kernel)
+    @assert length(basis) == n "Kernel and basis must be (m,n) and (n,) dimensional"
+    @assert length(data) == m "Kernel and data must be (m,n) and (m,) dimensional"
+    @assert length(size(data_errors)) == 2 "data_errors must be two-dimensional"
+    @assert size(data_errors)[1] == size(data_errors)[2] "data_errors must be square matrix"
+    @assert length(data) == size(data_errors)[1] "data and data_errors must have equal dimensions."
+    return data, data_errors, kernel
 end
 
-
-function check_args(
-    unfolder,
-    kernel::Union{Function, AbstractMatrix{<:Real}},
-    data::Union{Function, AbstractVector{<:Real}},
-    data_errors::Union{Function, AbstractVector{<:Real}},
-    y::Union{AbstractVector{<:Real}, Nothing},
-    )
-
-    function check_y()
-        if y == nothing
-            @error "For callable arguments `y` must be defined"
-            Base.error("For callable arguments `y` must be defined")
-        end
+function check_alphas_omegas(alphas, omegas, basis)
+    if omegas == nothing
+        omegas = [omega(basis, 2)]
     end
 
-    if !(typeof(kernel)<:AbstractMatrix{<:Real})
-        check_y()
-        kernel_array = discretize_kernel(unfolder.basis, kernel, y)
-    else
-        kernel_array = kernel
+    alphas = make_bounds(alphas, omegas)
+    @assert length(omegas) != 0 "Regularization matrix Omega is absent"
+    for Omega in omegas
+        m, n = size(Omega)
+        @assert m == n "omegas must be square matrices"
+        @assert length(basis) == n "omega and basis must be (n,n) and (n,) dimensional"
     end
+    if typeof(alphas) == User
+        @assert length(alphas.alphas) == length(omegas) "alphas and omegas must have equal lengths"
+    end
+    return alphas, omegas
+end
 
-    if !(typeof(data)<:AbstractVector{<:Real})
-        check_y()
-        data_array = data.(y)
-    else
-        data_array = data
-    end
-
-    if !(typeof(data_errors)<:AbstractVector{<:Real})
-        check_y()
-        data_errors_array = data_errors.(y)
-    else
-        data_errors_array = data_errors
-    end
-    return kernel_array, data_array, data_errors_array
+function check_phi_bounds(phi_bounds, basis)
+    phi_bounds = make_bounds(phi_bounds, basis)
+    @assert all(x -> x > 0, phi_bounds.higher-phi_bounds.lower) "Higher bound should be greater than lower one"
+    @assert all(x -> x > 0, phi_bounds.higher-phi_bounds.initial) "Higher bound should be greater than initial"
+    @assert all(x -> x > 0, phi_bounds.initial-phi_bounds.lower) "Initial should be greater than lower bound"
+    return phi_bounds
 end

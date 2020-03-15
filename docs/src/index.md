@@ -94,4 +94,25 @@ If the ``f`` function errors do not follow Gaussian distribution, the strategy `
 ```math
 \overrightarrow{\widehat{S}}[f]=E[\overrightarrow{\varphi}|\overrightarrow{f}]=\int \overrightarrow{\varphi} P(\overrightarrow{\varphi}|\overrightarrow{f}) d\overrightarrow{\varphi}
 ```
-The posterior probability ``P(\overrightarrow{\varphi}|\overrightarrow{f})`` should be obtained from MCMC sampling. It is applied in the `StatReg.jl` using `Mamba.jl` package.
+The posterior probability ``P(\overrightarrow{\varphi}|\overrightarrow{f})`` should be obtained from MCMC sampling. It is applied in the `StatReg.jl` using `BAT.jl`, `AHMC.jl` and `DHMC.jl` packages.
+
+
+# Non-negativity and other conditions
+If `phi` is known to be non-negative or has some value restrictions, it can be used to improve the solution. To take it into account, posterior probability is multiplied by fast declining function if `phi_i` reached the bound.
+
+```math
+P(\varphi | f)_{\varphi_{min} <\varphi < \varphi_{max}}  = P(\varphi | f) \cdot
+e^{- C_{lower}} \cdot e^{- C_{higher}}
+```
+```math
+C_{lower} = \sum_{m=1}^M I(\varphi_m < \varphi_{min\text{ }m}) \cdot \frac{\varphi_{min\text{ }m} - \varphi_m}{\varphi_{0 m}}
+```
+
+```math
+P(\varphi | f)_{\varphi_{min} <\varphi < \varphi_{max}}  = P(\varphi | f) \cdot
+e^{- C_{lower}} \cdot e^{- C_{higher}}
+```
+
+```math
+C_{higher} = \sum_{m=1}^M I(\varphi_m > \varphi_{max\text{ }m}) \cdot \frac{\varphi_{m} - \varphi_{max\text{ }m}}{\varphi_{0 m}}
+```

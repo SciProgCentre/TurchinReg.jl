@@ -12,7 +12,9 @@ Let's consider the simplest case of deconvolution.
 The function to be reconstructed ``\varphi(x)`` is the sum of two Gaussian distributions.
 
 ```julia
-using PyCall
+using Plots
+plotly()
+gr(size=(500,500), html_output_format=:png)
 
 a = 0
 b = 6.
@@ -28,22 +30,23 @@ function phi(x::Real)
     return norm(n1, mu1, sig1, x) + norm(n2, mu2, sig2, x)
 end
 
-x = collect(range(a, stop=b, length=300))
-
-myplot = plot(x, phi.(x))
+x = collect(range(a, stop=b, length=300));
+plot(x, phi.(x), title="Real phi function", label="Phi(x)")
 ```
 ![real_phi](img/real_phi.png)
 
 After integration we get data and errors. `kernel` - kernel function, `y` - measurement points, `f` - data points, `sig` - data errors.
 
 ```julia
-kernel(x::Real, y::Real) = getOpticsKernels("gaussian")(x, y)
+using QuadGK
+kernel_name = "rectangular"
+kernel(x::Real, y::Real) = getOpticsKernels(kernel_name)(x, y)
 
 convolution = y -> quadgk(x -> kernel(x,y) * phi(x), a, b, rtol=10^-5, maxevals=10^7)[1]
 y = collect(range(a, stop=b, length=30))
 ftrue = convolution.(y)
 
-sig = 0.05*ftrue + [0.01 for i = 1:Base.length(ftrue)]
+sig = 0.1*ftrue + [0.01 for i = 1:Base.length(ftrue)]
 
 using Compat, Random, Distributions
 noise = []
@@ -53,10 +56,10 @@ for sigma in sig
     push!(noise, n)
 end
 
-f = ftrue + noise
-plot(y, f, title="Integrated function",label=["f(y)"])
+f = ftrue + noise;
+plot(y, f, title="$(kernel_name) kernel", label="f(y)", seriestype=:scatter, yerr=sig)
 ```
-![integrated](img/integrated.png)
+![integrated](img/integrated_rectangular.png)
 
 Let's proceed to the reconstruction.
 
@@ -74,11 +77,13 @@ We will use Cubic Spline Basis with knots in data points and zero boundary condi
 
 ```julia
 basis = CubicSplineBasis(y, "dirichlet")
+p = plot()
 for func in basis.basis_functions
-    plot(x, func.f.(x))
+    p = plot!(x, func.(x), title="B-spline basis functions", legend=false, show = true)
 end
+display(p)
 ```
-![cubic_spline_basis](img/cubic_spline_basis.png)
+![cubic_spline_basis](img/basis.png)
 
 * Model:
 
@@ -91,20 +96,19 @@ model = GaussErrorUnfolder(basis, [Omega], "EmpiricalBayes", nothing, [1e-8], [1
 
 * Reconstruction:
 
-To reconstruct the function we use ``solve()`` that returns dictionary containing coefficients of basis function in the sum ``\varphi(x) = \sum_{k=1}^N coeff_n \psi_n(x)``, their errors ``errors_n`` (``\delta \varphi =  \sum_{k=1}^N errors_n \psi_n(x)``) and optimal parameter of smoothness ``\alpha``.
+To reconstruct the function we use ``solve()`` that returns `PhiVec` structure containing coefficients of basis function in the sum ``\varphi(x) = \sum_{k=1}^N coeff_n \psi_n(x)``, their errors ``errors_n`` (``\delta \varphi =  \sum_{k=1}^N errors_n \psi_n(x)``), optimal parameter of smoothness ``\alpha``, reconstructed function and error function.
 
 ```julia
-result = solve(model, kernel, f, sig, y)
+Omega = omega(basis, 2)
+result = solve(basis, f, sig, kernel, y, BATSampling(), ArgmaxOptim(), [Omega], PhiBounds());
 ```
 
 * Results
 
 Representation of results in a convenient way is possible with `PhiVec`:
 ```julia
-phivec = PhiVec(result, basis)
-
-phi_reconstructed = phivec.phi_function.(x)
-phi_reconstructed_errors = phivec.error_function.(x)
+phi_reconstructed = result.solution_function.(x)
+phi_reconstructed_errors = result.error_function.(x)
 
 plot(x, phi_reconstructed, ribbon=phi_reconstructed_errors, fillalpha=0.3, label="Reconstructed function with errors")
 plot!(x, phi.(x), label="Real function")
