@@ -274,9 +274,9 @@ version = "0.1.0"
 
 [[DoubleFloats]]
 deps = ["GenericSVD", "GenericSchur", "LinearAlgebra", "Polynomials", "Printf", "Quadmath", "Random", "Requires", "SpecialFunctions"]
-git-tree-sha1 = "9c29af88506b5fbf2085d0d094be8c33316c2bf6"
+git-tree-sha1 = "d76aa4de7fa717e59662bcea10f3db0ddf9d52be"
 uuid = "497a8b3b-efae-58df-a0af-a86822472b78"
-version = "1.1.5"
+version = "1.1.6"
 
 [[DualNumbers]]
 deps = ["Calculus", "LinearAlgebra", "NaNMath", "SpecialFunctions", "Test"]
@@ -297,9 +297,9 @@ version = "1.0.0"
 
 [[EmpiricalDistributions]]
 deps = ["ArraysOfArrays", "Distributions", "LinearAlgebra", "Random", "Statistics", "StatsBase"]
-git-tree-sha1 = "21930c9631ff4e3fbc5318ee65fe524efa04c632"
+git-tree-sha1 = "a00be89474c9c7de9c0468c36c62bd2b33bf685d"
 uuid = "0bbb1fad-0f24-45fe-94a4-415852c5cc3b"
-version = "0.1.1"
+version = "0.1.2"
 
 [[FFTW]]
 deps = ["AbstractFFTs", "BinaryProvider", "Conda", "Libdl", "LinearAlgebra", "Reexport"]
@@ -338,15 +338,15 @@ version = "0.10.9"
 
 [[GenericSVD]]
 deps = ["LinearAlgebra"]
-git-tree-sha1 = "c59a30ef95fa4b5e0567c1911652e0c70a5d055c"
+git-tree-sha1 = "62909c3eda8a25b5673a367d1ad2392ebb265211"
 uuid = "01680d73-4ee2-5a08-a1aa-533608c188bb"
-version = "0.2.2"
+version = "0.3.0"
 
 [[GenericSchur]]
 deps = ["LinearAlgebra", "Printf"]
-git-tree-sha1 = "2f9297b94eaf14170d2694a9f3f313f293e0df23"
+git-tree-sha1 = "43b4dc5648028be2c6e96201aa3653903bd1af21"
 uuid = "c145ed77-6b09-5dd9-b285-bf645a82121e"
-version = "0.3.0"
+version = "0.4.0"
 
 [[GitHub]]
 deps = ["Base64", "Dates", "HTTP", "JSON", "MbedTLS", "Sockets"]
@@ -356,9 +356,9 @@ version = "5.1.4"
 
 [[HTTP]]
 deps = ["Base64", "Dates", "IniFile", "MbedTLS", "Sockets"]
-git-tree-sha1 = "8d9bdd55c9d0d6ddf08f8b5229f90b7f274b6777"
+git-tree-sha1 = "cd60d9a575d3b70c026d7e714212fd4ecf86b4bb"
 uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
-version = "0.8.12"
+version = "0.8.13"
 
 [[HierarchicalMatrices]]
 deps = ["LinearAlgebra"]

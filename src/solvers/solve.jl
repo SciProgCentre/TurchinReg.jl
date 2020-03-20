@@ -1,7 +1,7 @@
 """
 Solve the problem
 
-```jullia
+```julia
 solve(
     basis::Basis,
     data::Union{AbstractVector{<:Real}, Function},
@@ -52,5 +52,6 @@ function solve(
         @assert isfinite(algo.log_data_distribution([1. for _ in 1:length(basis)])) "Incorrect log_data_distribution"
     end
     @info "Starting solution"
-    return _solve(algo, alphas, omegas, B, b, phi_bounds, basis)
+    @time res = _solve(algo, alphas, omegas, B, b, phi_bounds, basis)
+    return res
 end
