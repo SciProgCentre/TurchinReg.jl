@@ -35,7 +35,7 @@ function solve(
     @info "Finding optimal alpha"
     alphas = find_optimal_alpha(alphas, omegas, B, b)
     @info "Optimal alpha found"
-    @assert !((typeof(algo) == Analytically) && (phi_bounds != nothing)) "Can not apply bounds for analytical solution"
+    @assert !((typeof(algo) == Analytically) && ((phi_bounds != nothing) && (phi_bounds != PhiBounds()))) "Can not apply bounds for analytical solution"
     @assert !((typeof(alphas) == Marginalize) && (typeof(algo) == Analytically)) "Marginalizing is not posiible for analytical solution"
     phi_bounds = check_phi_bounds(phi_bounds, basis)
     if typeof(algo) != Analytically
@@ -52,6 +52,6 @@ function solve(
         @assert isfinite(algo.log_data_distribution([1. for _ in 1:length(basis)])) "Incorrect log_data_distribution"
     end
     @info "Starting solution"
-    @time res = _solve(algo, alphas, omegas, B, b, phi_bounds, basis)
+    res = _solve(algo, alphas, omegas, B, b, phi_bounds, basis)
     return res
 end

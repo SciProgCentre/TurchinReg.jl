@@ -155,6 +155,15 @@ mutable struct PhiBounds
     ) = new(lower, higher, initial, measure)
 end
 
+import Base.==
+function (==)(phi_bounds1::PhiBounds, phi_bounds2::PhiBounds)
+    l = phi_bounds1.lower == phi_bounds2.lower
+    h = phi_bounds1.higher == phi_bounds2.higher
+    i = phi_bounds1.initial == phi_bounds2.initial
+    m = phi_bounds1.measure == phi_bounds2.measure
+    return l && h && i && m
+end
+
 
 """
 Abstract type for all solution algorithms
