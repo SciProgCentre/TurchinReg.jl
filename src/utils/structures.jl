@@ -79,11 +79,12 @@ mutable struct ArgmaxOptim<:AlphasType
     initial::Union{AbstractVector{<:Real}, Nothing}
     algo
 
-    ArgmaxOptim(alphas::Union{AbstractVector{<:Real}, Nothing}=nothing,
-    lower::Union{AbstractVector{<:Real}, Nothing}=nothing,
-    higher::Union{AbstractVector{<:Real}, Nothing}=nothing,
-    initial::Union{AbstractVector{<:Real}, Nothing}=nothing,
-    algo=BFGS()
+    ArgmaxOptim(
+        alphas::Union{AbstractVector{<:Real}, Nothing}=nothing,
+        lower::Union{AbstractVector{<:Real}, Nothing}=nothing,
+        higher::Union{AbstractVector{<:Real}, Nothing}=nothing,
+        initial::Union{AbstractVector{<:Real}, Nothing}=nothing,
+        algo=BFGS()
     ) = new(alphas, lower, higher, initial, algo)
 end
 

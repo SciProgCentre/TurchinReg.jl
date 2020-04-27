@@ -30,9 +30,10 @@ struct BernsteinBasis <: Basis
         boundary_condition::Tuple{Union{String, Nothing}, Union{String, Nothing}}
         )
         basis_functions = []
+        n -= 1
         left_condition, right_condition = boundary_condition
         beg_function = 1
-        end_function = n
+        end_function = n + 1
 
         if left_condition == "dirichlet"
             n += 1

@@ -1,10 +1,10 @@
 # Getting started
 
 ## Installation
-To install StatReg.jl, start up Julia and type the following code-snipped into the REPL.
+To install TurchinReg.jl, start up Julia and type the following code-snipped into the REPL.
 ```julia
 import Pkg
-Pkg.clone("https://github.com/mipt-npm/StatReg.jl.git")
+Pkg.clone("https://github.com/mipt-npm/TurchinReg.jl.git")
 ```
 
 ## Usage

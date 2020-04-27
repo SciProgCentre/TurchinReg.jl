@@ -1,9 +1,9 @@
-include("../src/StatReg.jl")
-using .StatReg
+include("../src/TurchinReg.jl")
+using .TurchinReg
 using Documenter
 
 makedocs(
-    sitename = "StatReg.jl",
+    sitename = "TurchinReg.jl",
     format = Documenter.HTML(prettyurls = true),
     pages = Any[
         "Home" => "index.md",
@@ -14,6 +14,6 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/mipt-npm/StatReg.jl.git",
+    repo = "github.com/mipt-npm/TurchinReg.jl.git",
     forcepush = true
 )

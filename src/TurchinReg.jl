@@ -1,4 +1,4 @@
-module StatReg
+module TurchinReg
 
     using QuadGK, LinearAlgebra, Dierckx, Memoize, ApproxFun
     using Optim

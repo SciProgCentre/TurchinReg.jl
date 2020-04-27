@@ -1,5 +1,5 @@
-include("../src/StatReg.jl")
-using .StatReg
+include("../src/TurchinReg.jl")
+using .TurchinReg
 
 include("../src/utils/config.jl")
 include("../src/bases/b_spline_implementation.jl")

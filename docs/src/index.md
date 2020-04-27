@@ -1,6 +1,6 @@
-# Statreg.jl
+# TurchinReg.jl
 
-This is documentation for `Statreg.jl` -- a Julia package that allows to apply Turchin's method of statistical regularisation to solve the Fredholm equation of the first kind.
+This is documentation for `TurchinReg.jl` -- a Julia package that allows to apply Turchin's method of statistical regularisation to solve the Fredholm equation of the first kind.
 
 
 Let's consider equation
@@ -70,7 +70,7 @@ The value of the parameter ``\alpha`` is unknown and can be obtained in followin
 * as a maximum of a posterior information ``P(\alpha|\overrightarrow{f})``
 * as the mean of all possible ``\alpha``, defining the prior probability density as ``P(\overrightarrow{\varphi})=\int d\alpha P(\alpha) P(\overrightarrow{\varphi}|\alpha)`` (all alphas are equally probable).
 
-`StatReg.jl` allows to apply all of these options.
+`TurchinReg.jl` allows to apply all of these options.
 
 # Gaussian random process
 Experimental data usually follows a normal distribution. At that rate the regularisation has an analytical solution. Let the measurement vector f have errors described by a multidimensional Gaussian distribution with a covariance matrix ``\Sigma``:
@@ -94,7 +94,7 @@ If the ``f`` function errors do not follow Gaussian distribution, the strategy `
 ```math
 \overrightarrow{\widehat{S}}[f]=E[\overrightarrow{\varphi}|\overrightarrow{f}]=\int \overrightarrow{\varphi} P(\overrightarrow{\varphi}|\overrightarrow{f}) d\overrightarrow{\varphi}
 ```
-The posterior probability ``P(\overrightarrow{\varphi}|\overrightarrow{f})`` should be obtained from MCMC sampling. It is applied in the `StatReg.jl` using `BAT.jl`, `AHMC.jl` and `DHMC.jl` packages.
+The posterior probability ``P(\overrightarrow{\varphi}|\overrightarrow{f})`` should be obtained from MCMC sampling. It is applied in the `TurchinReg.jl` using `BAT.jl`, `AHMC.jl` and `DHMC.jl` packages.
 
 
 # Non-negativity and other conditions
