@@ -143,9 +143,9 @@ basis_bernstein = BernsteinBasis(a, b, 10)
 omega_bernstein = omega(basis_bernstein, 2)
 
 @testset "Bernstein basis" begin
-    @test isapprox(omega_bernstein1[2, 4], 0.08738149722131412)
+    @test isapprox(omega_bernstein1[2, 4], 0.09518681614522237)
     @test isapprox(omega_bernstein2[5, 8], 1.3317242238265603)
-    @test isapprox(omega_bernstein3[3, 5], 0.3206050909090908)
+    @test isapprox(omega_bernstein3[3, 4], 0.3174400000000001)
     @test isapprox(omega_bernstein4[1, 7], 0.10121457489878544)
     @test isapprox(omega_bernstein[6, 3], 5.056561085972847)
 end
