@@ -11,7 +11,7 @@
 To install TurchinReg.jl, start Julia and run
 ```
 julia> using Pkg
-julia> Pkg.clone("https://github.com/mipt-npm/TurchinReg.jl.git")
+julia> Pkg.add(PackageSpec(url = "https://github.com/mipt-npm/TurchinReg.jl.git"))
 ```
 
 ## Documentation
